@@ -1,0 +1,5 @@
+TODO LIST
+
+1. Whenever something is added to the stack, users must be prompted asking if they want to add anything on top of that card/die
+   Also, users must be prompted to respond to dice rolls after seeing the result
+   Also, whenever anything is popped from the stack, users must be asked if they want to react to whatever is the next card that would be popped

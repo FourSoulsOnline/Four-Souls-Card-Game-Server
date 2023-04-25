@@ -1,0 +1,13 @@
+Naming conventions for the game files:
+
+    Classes start with a capitol letter
+    Class names are singular
+
+    File names are plural
+
+    Variables representing completed card objects (ie "THE D6", "ISAAC", "A PENNY", etc)
+    are written in all lowercase snake case (the_d6, isaac, a_penny)
+
+    Variables representing anything but a completed card are written in camel case (theD6, isaac, aPenny)
+
+    The "name" attribute of cards should be in all caps
