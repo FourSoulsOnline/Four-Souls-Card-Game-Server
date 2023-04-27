@@ -1,5 +1,27 @@
 TODO LIST
 
-1. Whenever something is added to the stack, users must be prompted asking if they want to add anything on top of that card/die
-   Also, users must be prompted to respond to dice rolls after seeing the result
-   Also, whenever anything is popped from the stack, users must be asked if they want to react to whatever is the next card that would be popped
+- before final update, remove all prints and displayX() functions
+- add markers where information will need to be sent to server for input or visual updates
+- implement a print statement in every card action for the turn history
+
+- make sure when using a deep copy, don't remove, steal, add cards to deep copy, need to do that for actual players in the room
+
+Logic for showing other player as choices in Json (doesn't include user who used card)
+
+        message = ""
+        playerOption = []
+        playerList = copy.deepcopy(room.getPlayers())
+        for i in range(len(playerList)):
+            if playerList[i].getNumber() == user.getNumber():
+                playerList.pop(i)
+                break
+        for i in playerList:
+            playerOption.append(i.getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOption)
+        playerChoice = int(input())
+        for i in room.getPlayers():
+            if i.getNumber() == playerList[playerChoice - 1].getNumber():
+                chosenPlayer = i
+
+Created a function for this logic in Player called getChosenPlayer, use it by passing in a message and the user
+Ex. chosenPlayer = user.getChosenPlayer(message, user), see it in boomerang treasure card

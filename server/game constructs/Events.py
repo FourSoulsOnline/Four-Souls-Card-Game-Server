@@ -7,7 +7,8 @@ Events dont work correctly if they are on the board before the first players tur
 from Cards import Event
 from Dice import rollDice
 from Decks import Deck
-# from PIL import Image
+from JsonOutputHelper import JsonOutputHelper
+Json = JsonOutputHelper()
 
 # the active player must attack the monster deck 2 times this turn
 # TODO: force this to target the unknown top monster
@@ -20,7 +21,8 @@ class Ambush(Event):
         activePlayer.getCharacter().addAttacksLeft()
         activePlayer.getCharacter().addMandatoryAttacks()
         activePlayer.getCharacter().addMandatoryAttacks()
-        print("Ambushed by an unseen foe! You must attack twice more this turn.\n")
+        message = f"Player {activePlayer.getNumber()} is ambushed by an unseen foe! They must attack twice more this turn."
+        Json.systemOutput(message)
         self.resolve(activePlayer)
         return
 
@@ -29,16 +31,21 @@ class ChestMoney(Event):
         super().__init__(name, picture)
 
     def use(self, activePlayer):
+        message = f"Rolling for {self.name}..."
+        Json.systemOutput(message)
         count = rollDice(activePlayer)
         if count < 3:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a meager 1c."
+            Json.systemOutput(message)
             activePlayer.addCoins(1)
-            print("You open the CHEST and find a meager 1c.\n")
         elif count < 5:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds 3c."
+            Json.systemOutput(message)
             activePlayer.addCoins(3)
-            print("You open the CHEST and find 3c.\n")
         else:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a cool 6c."
+            Json.systemOutput(message)
             activePlayer.addCoins(6)
-            print("You open the CHEST and find a handsome 6c.\n")
         self.resolve(activePlayer)
         return
 
@@ -47,16 +54,21 @@ class ChestLoot(Event):
         super().__init__(name, picture)
 
     def use(self, activePlayer):
+        message = f"Rolling for {self.name}..."
+        Json.systemOutput(message)
         count = rollDice(activePlayer)
         if count < 3:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a single loot."
+            Json.systemOutput(message)
             activePlayer.loot(1)
-            print("You open the CHEST and find a single loot.\n")
         elif count < 5:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds 2 loot cards."
+            Json.systemOutput(message)
             activePlayer.loot(2)
-            print("You open the CHEST and find 2 loot cards.\n")
         else:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a triplet of loot!"
+            Json.systemOutput(message)
             activePlayer.loot(3)
-            print("You open the CHEST and find a trio of loot.\n")
         self.resolve(activePlayer)
         return
 
@@ -65,16 +77,21 @@ class DarkChest1(Event):
         super().__init__(name, picture)
 
     def use(self, activePlayer):
+        message = f"Rolling for {self.name}..."
+        Json.systemOutput(message)
         count = rollDice(activePlayer)
         if count < 3:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a single loot."
+            Json.systemOutput(message)
             activePlayer.loot(1)
-            print("You open the CHEST and find a single loot.\n")
         elif count < 5:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds 3c."
+            Json.systemOutput(message)
             activePlayer.addCoins(3)
-            print("You open the CHEST and find 3c.\n")
         else:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a pair of Troll Bombs (-2 HP)!!. D:"
+            Json.systemOutput(message)
             activePlayer.takeDamage(2, activePlayer)
-            print("You open the CHEST to find two live BOMBS!!! You take 2 damage :(\n")
         self.resolve(activePlayer)
         return
 
@@ -83,16 +100,21 @@ class DarkChest2(Event):
         super().__init__(name, picture)
 
     def use(self, activePlayer):
+        message = f"Rolling for {self.name}..."
+        Json.systemOutput(message)
         count = rollDice(activePlayer)
         if count < 3:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a meager 1c."
+            Json.systemOutput(message)
             activePlayer.addCoins(1)
-            print("You open the CHEST and find a meager 1c.\n")
         elif count < 5:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds 2 loot."
+            Json.systemOutput(message)
             activePlayer.loot(2)
-            print("You open the CHEST and find 2 loot.\n")
         else:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a pair of Troll Bombs (-2 HP)!! D:"
+            Json.systemOutput(message)
             activePlayer.takeDamage(2, activePlayer)
-            print("You open the CHEST to find two live BOMBS!!! You take 2 damage :(\n")
         self.resolve(activePlayer)
         return
 
@@ -101,16 +123,21 @@ class GoldChestLoot(Event):
         super().__init__(name, picture)
 
     def use(self, activePlayer):
+        message = f"Rolling for {self.name}..."
+        Json.systemOutput(message)
         count = rollDice(activePlayer)
         if count < 3:
+            message = f"Player {activePlayer.getNumber()} got a lucky roll, an item was hidden in {self.name}!! :D"
+            Json.systemOutput(message)
             activePlayer.gainTreasure(1)
-            print("Lucky roll, an item was hidden in the chest!!\n")
         elif count < 5:
+            message = f""
+            Json.systemOutput(message)
             activePlayer.loot(1)
-            print("You open the CHEST and find a single loot card.\n")
         else:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a pair of loot cards."
+            Json.systemOutput(message)
             activePlayer.loot(2)
-            print("You open the CHEST and find 2 loot cards.\n")
         self.resolve(activePlayer)
         return
 
@@ -119,16 +146,21 @@ class GoldChestMoney(Event):
         super().__init__(name, picture)
 
     def use(self, activePlayer):
+        message = f"Rolling for {self.name}..."
+        Json.systemOutput(message)
         count = rollDice(activePlayer)
         if count < 3:
+            message = f"Player {activePlayer.getNumber()} got a lucky roll, an item was hidden in {self.name}!! :D"
+            Json.systemOutput(message)
             activePlayer.gainTreasure(1)
-            print("Lucky roll, an item was hidden in the chest!!\n")
         elif count < 5:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a respectable 5c. :)"
+            Json.systemOutput(message)
             activePlayer.addCoins(5)
-            print("You open the CHEST and find a respectable 5c.\n")
         else:
+            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds a handsome 7c. B)"
+            Json.systemOutput(message)
             activePlayer.addCoins(7)
-            print("You open the CHEST and find a handsome 7c!\n")
         self.resolve(activePlayer)
         return
 
@@ -160,14 +192,20 @@ class Greed(Event):
             for i in range(len(players)):
                 if richest[0] == players[i]:
                     players[i].setCoins(0)
-                    print(f"Player {i+1}'s GREED is their downfall, their coin total dropped to 0!!\n")
+                    message = f"Player {i+1}'s GREED is their downfall, their coin total dropped to 0!! >:)"
+                    Json.systemOutput(message)
         # there are 2+ people with the most coins
         else:
-            for i in range(len(richest)):
-                print(f"{i+1}: Player {richest[i].getNumber()}")
-            choice = int(input(f"Force which player to lose all coins?: "))
-            choice -= 1
-            chosenPlayer = richest[choice]
+            playerOption = []
+            # create an array of strings to pass into JSON
+            for i in richest:
+                playerOption.append(i.getName())
+            # this passes and prints data for JSON
+            message = f"Force which player to lose all coins?"
+            Json.choiceOutput(activePlayer.getSocketId(), message, playerOption)
+            # then look for input from button press
+            playerChoice = int(input())
+            chosenPlayer = richest[playerChoice-1]
             chosenPlayer.setCoins(0)
         self.resolve(activePlayer)
         return
@@ -179,11 +217,12 @@ class MegaTrollBomb(Event):
 
     def use(self, activePlayer):
         players = activePlayer.getRoom().getPlayers()
-        print(f"OH NO! It's a {self.name}!!")
+        message = f"OH NO! It's a {self.name}!! D:>"
+        Json.systemOutput(message)
         for i in range(len(players)):
+            message = f"Player {players[i].getNumber()} is blown up by {self.name}!!!"
+            Json.systemOutput(message)
             players[i].takeDamage(2, players[i])
-            print(f"Player {players[i].getNumber()} is blown up by {self.name}!!!")
-        print("")
         self.resolve(activePlayer)
         return
 
@@ -192,25 +231,27 @@ class SecretRoom(Event):
         super().__init__(name, picture)
 
     def use(self, activePlayer):
+        message = f"Rolling for {self.name}..."
+        Json.systemOutput(message)
         count = rollDice(activePlayer)
         if count < 2:
+            message = f"Player {activePlayer.getNumber()} uncovers a terrible secret (3 damage)!! x_x"
+            Json.systemOutput(message)
             activePlayer.takeDamage(3, activePlayer)
-            print("You uncover a terrible secret (3 damage)!!\n")
         elif count < 4:
+            message = f"Player {activePlayer.getNumber()} wasted 2 loot cards finding this secret room."
+            Json.systemOutput(message)
             # show hand and discard 2
-            print("You wasted 2 cards finding this secret room.\n")
             for i in range(2):
-                hand = activePlayer.getHand().printCardListNames()
-                print("Choose a loot card to discard:")
-                choice = int(input(f"  Choice {i+1}: "))
-                choice -= 1
-                activePlayer.getBoard().discardLoot(activePlayer, choice)
+                activePlayer.chooseDiscard(0, activePlayer)
         elif count < 6:
+            message = f"Player {activePlayer.getNumber()} finds a convenient 7c hidden inside the secret room!"
+            Json.systemOutput(message)
             activePlayer.addCoins(7)
-            print(f"You find 7c hidden inside the {self.name}!\n")
         else:
+            message = f"Player {activePlayer.getNumber()} finds a secret item hidden inside the secret room! B)"
+            Json.systemOutput(message)
             activePlayer.gainTreasure(1)
-            print(f"You find a secret item hidden inside the {self.name}!\n")
         self.resolve(activePlayer)
         return
 
@@ -226,7 +267,8 @@ class ShopUpgrade(Event):
         activePlayer.getBoard().addTreasureSlot()
         # add an attack to the active player
         activePlayer.getCharacter().addAttacksLeft()
-        print("You find a secret shop! More items can be purchased and you can attack again.\n")
+        message = f"Player {activePlayer.getNumber()} finds a secret shop! More items can be purchased and they can attack again."
+        Json.systemOutput(message)
         self.resolve(activePlayer)
         return
 
@@ -236,9 +278,11 @@ class TrollBombs(Event):
         super().__init__(name, picture)
 
     def use(self, activePlayer):
-        print(f"OH NO! It's a pair of {self.name}!!")
+        message = f"OH NO! It's a pair of Troll Bombs!!"
+        Json.systemOutput(message)
+        message = f"Player {activePlayer.getNumber()} is blown up by {self.name}!!! :("
+        Json.systemOutput(message)
         activePlayer.takeDamage(2, activePlayer)
-        print(f"Player {activePlayer.getNumber()} is blown up by {self.name}!!!\n")
         self.resolve(activePlayer)
         return
 
@@ -253,36 +297,37 @@ class XlFloor(Event):
         activePlayer.getBoard().addMonsterSlot()
         # add an attack to the active player
         activePlayer.getCharacter().addAttacksLeft()
-        print("The walls are shifting...! More monsters appeared and you can attack again.\n")
+        message = f"The walls are shifting...! More monsters appeared and Player {activePlayer.getNumber()} can attack again."
+        Json.systemOutput(message)
         self.resolve(activePlayer)
         return
 
 def createEventCards():
     eventDeck = Deck([])
-    ambush = Ambush("AMBUSH!", Image.open("test image.jpg"))
+    ambush = Ambush("Ambush!", "test image.jpg")
     eventDeck.addCardTop(ambush)
-    chest_money = ChestMoney("CHEST (MONEY)", Image.open("test image.jpg"))
+    chest_money = ChestMoney("Chest (Coin)", "test image.jpg")
     eventDeck.addCardTop(chest_money)
-    chest_loot = ChestLoot("CHEST (LOOT)", Image.open("test image.jpg"))
+    chest_loot = ChestLoot("Chest (Loot)", "test image.jpg")
     eventDeck.addCardTop(chest_loot)
-    dark_chest_1 = DarkChest1("DARK CHEST (1)", Image.open("test image.jpg"))
+    dark_chest_1 = DarkChest1("Dark Chest (Loot 1)", "test image.jpg")
     eventDeck.addCardTop(dark_chest_1)
-    dark_chest_2 = DarkChest1("DARK CHEST (2)", Image.open("test image.jpg"))
+    dark_chest_2 = DarkChest1("Dark Chest (Gain 1)", "test image.jpg")
     eventDeck.addCardTop(dark_chest_2)
-    gold_chest_loot = GoldChestLoot("GOLD CHEST (LOOT)", Image.open("test image.jpg"))
+    gold_chest_loot = GoldChestLoot("Gold Chest (Loot)", "test image.jpg")
     eventDeck.addCardTop(gold_chest_loot)
-    gold_chest_money = GoldChestLoot("GOLD CHEST (MONEY)", Image.open("test image.jpg"))
+    gold_chest_money = GoldChestLoot("Gold Chest (Gain)", "test image.jpg")
     eventDeck.addCardTop(gold_chest_money)
-    greed = Greed("GREED!", Image.open("test image.jpg"))
+    greed = Greed("Greed!", "test image.jpg")
     eventDeck.addCardTop(greed)
-    mega_troll_bomb = MegaTrollBomb("MEGA TROLL BOMB!", Image.open("test image.jpg"))
+    mega_troll_bomb = MegaTrollBomb("Mega Troll Bomb!", "test image.jpg")
     eventDeck.addCardTop(mega_troll_bomb)
-    secret_room = SecretRoom("SECRET ROOM!", Image.open("test image.jpg"))
+    secret_room = SecretRoom("Secret Room!", "test image.jpg")
     eventDeck.addCardTop(secret_room)
-    shop_upgrade = ShopUpgrade("SHOP UPGRADE!", Image.open("test image.jpg"))
+    shop_upgrade = ShopUpgrade("Shop Upgrade!", "test image.jpg")
     eventDeck.addCardTop(shop_upgrade)
-    troll_bombs = TrollBombs("TROLL BOMBS", Image.open("test image.jpg"))
+    troll_bombs = TrollBombs("Troll Bombs", "test image.jpg")
     eventDeck.addCardTop(troll_bombs)
-    xl_floor = XlFloor("XL FLOOR!", Image.open("test image.jpg"))
+    xl_floor = XlFloor("XL Floor!", "test image.jpg")
     eventDeck.addCardTop(xl_floor)
     return eventDeck

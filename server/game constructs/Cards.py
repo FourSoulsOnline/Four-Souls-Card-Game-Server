@@ -6,6 +6,7 @@ Classes for more specific cards (such as functional Loot cards) are in their ind
 '''
 # # Image is a class of the "Pillow" library
 # from PIL import Image
+import json
 from Coins import CoinStack
 from TreasureReward import TreasureReward
 #from Dice import Dice
@@ -77,7 +78,8 @@ class Entity(Card):
             "maxHp": self.maxHp,
             "attack": self.attack,
             "maxAttack": self.maxAttack,
-            "inventory": self.inventory
+            # don't think we need inventory anymore - D.D.
+            # "inventory": self.inventory
         }
         return entityObject
 
@@ -150,7 +152,9 @@ class Entity(Card):
                         break
         self.hp -= num
         if self.hp <= 0:
-            self.die(attacker)
+            # enemy death
+            if isinstance(self, Enemy):
+                self.die(attacker)
         return
 
 
@@ -264,10 +268,6 @@ class Character(Entity):
         self.purchases -= 1
         return
 
-    def die(self, attacker):
-        print(f"{self.getName()} has died!\n")
-        return
-
 
 # Monster child interface for Entity(Card)
 class Monster(Card):
@@ -301,15 +301,10 @@ class Enemy(Entity, Monster):
         return self.reward
     
     def getJsonObject(self):
-        # since rewards is a list, need to get the JSON objects for that variable.
-        rewardJsonObjects = []
-        for x in self.reward:
-            rewardJsonObjects.append(x.getJsonObject())
         enemyObject = {
             "entity": super().getJsonObject(),
             "diceValue": self.diceValue,
             "soulCount": self.soulCount,
-            "reward": rewardJsonObjects,
         }
         return enemyObject
     
@@ -400,6 +395,13 @@ class Event(Monster):
         board = activePlayer.getBoard()
         index = board.findMatchingMonster(self.name)
         board.discardMonsterIndex(index)
+
+        # Print Player Hand and Board for frontend rendering - D.D.
+        playerList = activePlayer.getRoom().getPlayers()
+        for player in playerList:
+            print(json.dumps(player.getPlayerHandObject()))
+
+        # PLAYER-BOARD JSON
         board.checkMonsterSlots(activePlayer)
         return
 

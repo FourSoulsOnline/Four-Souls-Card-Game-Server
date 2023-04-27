@@ -1,5 +1,6 @@
 # Jackson: Flush! and Chaos Card
-# Ethan: Everything else
+# Ethan: Everything else, helped Daniel with adding JSON
+# Daniel: Added JSON to cards
 
 from Cards import *
 from Decks import Deck
@@ -7,6 +8,11 @@ from Effects import *
 from Dice import *
 from DeclareAttack import DeclaredAttack
 import random
+import copy
+from JsonOutputHelper import JsonOutputHelper
+
+Json = JsonOutputHelper()
+
 
 # Roll then either gain 1 cent, loot 1, or gain +1 hp
 class BookOfSin(GoldTreasure):
@@ -17,19 +23,23 @@ class BookOfSin(GoldTreasure):
         self.picture = "test image.jpg"
 
     def use(self, user):
-        dice = Dice()
-        user.addToStack(dice.roll())
-        diceResult = user.getRoom().getStack().findDice().getResult()
+        # roll a die
+        diceResult = rollDice(user)
         # gain 1 cent
         if diceResult == 1 or diceResult == 2:
+            message = "You got 1 coin"
+            Json.systemOutput(message)
             user.addCoins(1)
         # loot 1
         elif diceResult == 3 or diceResult == 4:
+            message = "You got a loot card"
+            Json.systemOutput(message)
             user.loot(1)
         # gain +1 hp
         elif diceResult == 5 or diceResult == 6:
+            message = "You gained 1 Hp until end of turn"
+            Json.systemOutput(message)
             user.addHp(1)
-        user.getRoom().getStack().pop() # pop off the dice after it was used
         self.tapped = True
         return
 
@@ -43,25 +53,24 @@ class Boomerang(GoldTreasure):
 
     def use(self, user):
         room = user.getRoom()
-        # Shows players to select from
-        print("Which player do you want to swap a card with")
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                pass
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
+        # create a string var to pass into JSON
+        message = "Which player do you want to steal a loot card from"
+        chosenPlayer = user.getChosenPlayer(message, user)
         # check to see if their hand is empty
-        if room.getPlayers()[playerChoice - 1].getHand().getDeckLength() == 0:
-            print(f"{room.getPlayers()[playerChoice - 1].getName()} hand is empty")
+        if chosenPlayer.getHand().getDeckLength() == 0:
+            message = f"{chosenPlayer.getName()}'s hand is empty"
+            Json.systemOutput(message)
         # steal a random card from selected player's hand
         else:
-            player = room.getPlayers()[playerChoice - 1]
-            randInt = random.randint(0, player.getHand().getDeckLength() - 1)
-            randCard = player.getHand().getCard(randInt)
-            player.getHand().removeCardIndex(randInt)
+            # get a random number based on the number of cards is chosen player's hand
+            randInt = random.randint(0, chosenPlayer.getHand().getDeckLength() - 1)
+            randCard = chosenPlayer.getHand().getCard(randInt)
+            chosenPlayer.getHand().removeCardIndex(randInt)
             user.getHand().addCardTop(randCard)
+            message = f"Player {user.getNumber()} stole a loot card at random from Player {chosenPlayer.getNumber()}"
+            Json.systemOutput(message)
             self.tapped = True
+        return
 
 # destroy this, you may play any number of additional loot cards till end of turn
 class Box(GoldTreasure):
@@ -75,8 +84,14 @@ class Box(GoldTreasure):
         user.getCharacter().setTapped(9999)
         # destroy this item
         for i in range(user.getItems().getDeckLength()):
-            if user.getItems().getCard(i - 1).getName() == "BOX!":
+            if user.getItems().getCard(i - 1).getName() == "Box!":
+                # save the Box card to add to discard
+                boxCard = user.getItems().getCard(i - 1)
                 user.getItems().removeCardIndex(i - 1)
+                # add the Box card into the treasure discard deck
+                user.getRoom().getBoard().getDiscardTreasureDeck().addCardTop(boxCard)
+        message = "The Box has been used and destroyed"
+        Json.systemOutput(message)
         return
 
 # Loot 1 then put loot card from hand on top of loot deck
@@ -89,17 +104,23 @@ class BumFriend(GoldTreasure):
 
     def use(self, user):
         room = user.getRoom()
+        # loot a card
         user.loot(1)
-        print("Choose which card to put on top of the loot deck")
-        user.getHand().printCardListNames()
-        index = int(input("Choice: "))
+        playerOptions = []
+        message = "Choose which card to put on top of the loot deck"
+        for i in user.getHand().getCardList():
+            playerOptions.append(i.getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOptions)
+        index = int(input())
         # puts chosen card on top of loot deck then removes card from player's hand
         room.getBoard().getLootDeck().addCardTop(user.getHand().getCard(index - 1))
         user.getHand().removeCardIndex(index - 1)
+        message = "Bum Friend has been used"
+        Json.systemOutput(message)
         self.tapped = True
         return
 
-# each player gives hand to player on their left
+# each player gives hand to player on their left  TODO: Optimize the logic
 class Chaos(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -153,34 +174,62 @@ class ChaosCard(GoldTreasure):
             if user.getItems().getCardList()[i] == self:
                 room.getBoard().discardTreasure(user, i)
                 break
+        # RETURN JSON GAME STATE
         # choose effect
-        choice = int(input("Choose: Kill a creature (1) | Destroy an item/soul (2)"))
+        message = "Kill a creature or Destroy an item/soul "
+        Json.choiceOutput(user.getSocketId(), message, ["Kill a creature", "Destroy an item/soul"])
+        choice = int(input())
         if choice == 1:
-            room.displayEntities()
-            target = int(input("Kill who?: "))
+            playerOptions = []
+            message = "Kill who?"
+            # create array of strings for JSON choices entities to kill
+            for i in room.getEntities():
+                playerOptions.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOptions)
+            target = int(input())
             if int(target) <= len(playerList):  # kill player
                 player = room.getPlayers()[int(target) - 1]
-                player.getCharacter().die(user)
+                player.die(user)
             else:  # kill monster
                 monster = user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][-1]
                 monster.die(user)
         else:
-            choice = int(input("Destroy an item (1) or a soul (2)?: "))
-            if choice == 1: # destroy item
-                user.getRoom().displayCharacters()
-                choice2 = int(input("Destroy an item from which player?: "))
+            message = "Destroy an item or a soul?"
+            Json.choiceOutput(user.getSocketId(), message, ["Item", "Soul"])
+            choice = int(input())
+            if choice == 1:  # destroy item
+                playerOption = []
+                message = "Destroy an item from which player?"
+                for i in room.getPlayers():
+                    playerOption.append(i.getName())
+                Json.choiceOutput(user.getSocketId(), message, playerOption)
+                choice2 = int(input())
                 choice2 -= 1
                 if playerList[choice2].getItems().getDeckLength() > 0:  # so long as the chosen player has at least 1 item
-                    playerList[choice2].getItems().printCardListNames()
-                    itemChoice = int(input(f"Destroy which item from player {choice2 + 1}?: "))
+                    playerOption = []
+                    message = f"Destroy which item from player {choice2 + 1}?"
+                    for i in playerList[choice2].getItems().getCardList():
+                        playerOption.append(i.getName())
+                    Json.choiceOutput(user.getSocketId(), message, playerOption)
+                    itemChoice = int(input())
                     itemChoice -= 1
                     room.getBoard().discardTreasure(playerList[choice2], itemChoice)
-            else: #destroy soul
-                user.getRoom().displayCharacters()
-                # TODO: will need to be edited when souls are made into actual cards
-                choice2 = int(input("Destroy a soul from which player?: "))
+                    message = "Chao Card has destroyed an item"
+                    Json.systemOutput(message)
+                else:
+                    message = "chosen player doesn't have any destroyable items"
+                    Json.systemOutput(message)
+            else:  # destroy soul
+                playerOption = []
+                message = "Destroy a soul from which player?"
+                for i in room.getPlayers():
+                    playerOption.append(i.getName())
+                Json.choiceOutput(user.getSocketId(), message, playerOption)
+                choice2 = int(input())
                 choice2 -= 1
                 playerList[choice2].subtractSouls(1)
+                message = f"Player {playerList[choice2].getNumber()} lost a soul"
+                Json.systemOutput(message)
         return
 
 # choose one: put each monster not being attacked on the bottom of the monster deck | put each shop item on the bottom of the treasure deck
@@ -194,8 +243,10 @@ class Flush(GoldTreasure):
         monsterDeck = board.getMonsterDeck()
         treasureDeck = board.getTreasureDeck()
         self.tapped = True
-
-        choice = int(input("FLUSH! the active monster (1) or treasure (2) cards?: "))
+        message = "Flush! the active monsters or treasure cards?"
+        Json.choiceOutput(user.getSocketId(), message, ["Monsters", "Treasures"])
+        choice = int(input())
+        # CHOICE JSON
         if choice == 1:
             # add all monsters on the board to the bottom of the deck
             for i in range(len(board.getMonsters())):
@@ -206,14 +257,14 @@ class Flush(GoldTreasure):
                         if isinstance(user.getRoom().getStack().getStack()[0][0], DeclaredAttack):
                             if user.getRoom().getStack().getStack()[0][0].getMonster() == board.getMonsters()[i][0]:
                                 pass
-                            else: # there is confirmed no attack on the monster being discarded
+                            else:  # there is confirmed no attack on the monster being discarded
                                 monsterDeck.addCardBottom(board.getMonsters()[i][0])
             # clear out the monster slots
             for i in range(len(board.getMonsters())):
                 board.getMonsters()[i] = []
             board.checkMonsterSlots(user)
-            print("New monsters fill the board!\n")
-
+            message = "New monsters fill the board!"
+            Json.systemOutput(message)
         else:
             # add all treasures to the bottom of the deck
             for i in range(len(board.getTreasures())):
@@ -222,7 +273,8 @@ class Flush(GoldTreasure):
             for i in range(len(board.getTreasures())):
                 board.getTreasures()[i] = []
             board.checkTreasureSlots()
-            print("The shop is restocked!\n")
+            message = "The shop is restocked!"
+            Json.systemOutput(message)
         return
 
 # Swap this card with a non-eternal item another player controls
@@ -236,40 +288,40 @@ class Decoy(GoldTreasure):
     def use(self, user):
         room = user.getRoom()
         # Choose a player that you want to swap an item with
-        print("Which player do you want to swap a card with")
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                pass  # Don't show user in player selection
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
+        message = "Which player do you want to swap a card with"
+        chosenPlayer = user.getChosenPlayer(message, user)
         # check to make sure that player has items to swap with, check is one because they will always have eternal item
-        if room.getPlayers()[playerChoice - 1].getItems().getDeckLength() == 1:
-            print("Player doesn't have any swappable items")
+        if chosenPlayer.getItems().getDeckLength() <= 1:
+            message = "Player doesn't have any swappable items"
+            Json.systemOutput(message)
             return
         else:
             # choose an item to swap with
-            print("Choose which item to steal")
-            room.getPlayers()[playerChoice - 1].getItems().printCardListNames()
-            cardChoice = int(input("Choice: "))
+            message = "Choose a card to swap with"
+            playerOption = []
+            for i in chosenPlayer.getItems().getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            cardChoice = int(input())
             # check to make sure selected card isn't an eternal item
-            if room.getPlayers()[playerChoice - 1].getItems().getCard(cardChoice - 1).getEternal() == True:
-                print("Can't choose an eternal item to swap with")
+            if chosenPlayer.getItems().getCard(cardChoice - 1).getEternal() == True:
+                message = "Can't choose an eternal item to swap with"
+                Json.systemOutput(message)
                 return
             else:
                 self.tapped = True
                 # swap Decoy with selected Item
                 # save and remove where decoy is in user's item list
                 for i in range(user.getItems().getDeckLength()):
-                    if user.getItems().getCard(i - 1).getName() == "DECOY":
+                    if user.getItems().getCard(i - 1).getName() == "Decoy":
                         decoy = user.getItems().getCard(i - 1)
                         user.getItems().removeCardIndex(i - 1)
-                # save chosen card and then remove it from chosen player item deck
-                choseCard = room.getPlayers()[playerChoice - 1].getItems().getCard(cardChoice - 1)
-                room.getPlayers()[playerChoice - 1].getItems().removeCardIndex(cardChoice - 1)
+                # steal the chosen card from the chosen player
+                room.getBoard().stealTreasure(user, chosenPlayer, cardChoice - 1)
                 # give decoy to chosen player and choseCard to user
-                room.getPlayers()[playerChoice - 1].getItems().addCardBottom(decoy)
-                user.getItems().addCardBottom(choseCard)
+                chosenPlayer.getItems().addCardBottom(decoy)
+                message = "Decoy has been used and cards have been swapped"
+                Json.systemOutput(message)
                 return
 
 # destroy another item, then roll on 1 - 5 destroy this item and loot 2 on 6 recharge this item
@@ -283,44 +335,57 @@ class GlassCannon(GoldTreasure):
     def use(self, user):
         room = user.getRoom()
         # Choose a player that you want to destroy an item
-        print("Which player do you want to destroy one of their items")
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                print(f"{i + 1} :Yourself")
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
+        message = "Choose a character to destroy one of their items"
+        playerOption = []
+        for i in room.getPlayers():
+            playerOption.append(i.getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOption)
+        playerChoice = int(input())
         # check to make sure that player has items to destroy , check is one because they will always have eternal item
-        if room.getPlayers()[playerChoice - 1].getItems().getDeckLength() == 1:
-            print("Player doesn't have any swappable items")
+        if room.getPlayers()[playerChoice - 1].getItems().getDeckLength() <= 1:
+            message = "Player doesn't have any destroyable items"
+            Json.systemOutput(message)
             return
         else:
             # choose an item to destroy with
-            print("Choose which item to destroy")
-            room.getPlayers()[playerChoice - 1].getItems().printCardListNames()
-            cardChoice = int(input("Choice: "))
+            message = "Choose an item to destroy"
+            playerOption = []
+            for i in room.getPlayers()[playerChoice - 1].getItems().getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            cardChoice = int(input())
             # check to make sure selected card isn't an eternal item
             if room.getPlayers()[playerChoice - 1].getItems().getCard(cardChoice - 1).getEternal() == True:
-                print("Can't choose an eternal item to destroy")
+                message = "Can't choose an eternal item to destroy"
+                Json.systemOutput(message)
                 return
             else:
                 self.tapped = True
                 # destroy selected item
-                room.getPlayers()[playerChoice - 1].getItems().removeCardIndex(cardChoice - 1)
+                room.getBoard().discardTreasure(room.getPlayers()[playerChoice - 1], cardChoice - 1)
                 # roll a dice
                 diceResult = rollDice(user)
                 # if dice is a 1 - 5 then destroy this item and loot 2
                 if diceResult < 6:
                     # remove this card from their items
                     for i in range(user.getItems().getDeckLength()):
-                        if user.getItems().getCard(i - 1).getName() == "GLASS CANNON":
+                        if user.getItems().getCard(i - 1).getName() == "Glass Cannon":
+                            # set eternal to false so card can be destroyed and then save card to be added to discard
                             self.eternal = False
+                            glassCannonCard = user.getItems().getCard(i - 1)
+                            # destroy Glass Cannon from user's items
                             user.getItems().removeCardIndex(i - 1)
+                            # add the Glass Cannon card into the treasure discard deck
+                            user.getRoom().getBoard().getDiscardTreasureDeck().addCardTop(glassCannonCard)
                     # then loot 2
                     user.loot(2)
+                    message = "Glass Cannon destroyed an item along with itself, but you looted 2"
+                    Json.systemOutput(message)
                 # if dice roll is a 6, recharge this item
                 elif diceResult == 6:
                     self.tapped = False
+                    message = "Glass Cannon destroyed an item and is ready to be used again (unless it destroyed itself)"
+                    Json.systemOutput(message)
         return
 
 # Change the result of a die to a 1 or a 6
@@ -336,15 +401,23 @@ class Godhead(GoldTreasure):
         stack = room.getStack()
         dice = stack.findDice()
         val = 0
-        # loop until given valid input
-        while int(val) != 1 and int(val) != 6:
-            val = int(input("Do you want to change dice roll to 1 or 6: "))
+        message = "Do you want to change the dice roll to a 1 or 6?"
+        Json.choiceOutput(user.getSocketId(), message, ["1", "6"])
+        val = int(input())
         # if there is a die, update the die value
         if isinstance(dice, Dice) == True:
-            dice.setResult(val)
+            # if user chose 1, set dice value to 1
+            if val == 1:
+                dice.setResult(val)
+            else:  # set the dice value to 6
+                dice.setResult(6)
+                val = 6
             self.tapped = True
+            message = f"Dice result has been changed to a {val}"
+            Json.systemOutput(message)
         else:
-            print("No dice found")
+            message = "No dice found"
+            Json.systemOutput(message)
         return
 
 # choose a player, that player gives you a loot card from their hand
@@ -354,20 +427,24 @@ class GuppysHead(GoldTreasure):
         self.eternal = False
         self.name = "Guppy's Head"
         self.picture = "test image.jpg"
+
     def use(self, user):
         room = user.getRoom()
-        print("Choose a player to give you a loot card from their hand")
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                pass # don't display player using this card
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
-        print(f"Player {room.getPlayers()[playerChoice - 1].getNumber()} pick a card to give to Player {user.getNumber()}")
-        room.getPlayers()[playerChoice - 1].getHand().printCardListNames()
-        cardChoice = int(input("Choice: "))
-        user.getHand().addCardBottom(room.getPlayers()[playerChoice - 1].getHand().getCard(cardChoice - 1))
-        room.getPlayers()[playerChoice - 1].getHand().removeCardIndex(cardChoice - 1)
+        # Choose a player to have them give the user a loot card
+        message = "Choose a player to give you a loot card from their hand"
+        chosenPlayer = user.getChosenPlayer(message, user)
+        # have the chosen player choose a loot card to give
+        message = f"Player {chosenPlayer.getNumber()} pick a card to give to Player {user.getNumber()}"
+        playerOption = []
+        for i in chosenPlayer.getHand().getCardList():
+            playerOption.append(i.getName())
+        Json.choiceOutput(chosenPlayer.getSocketId(), message, playerOption)
+        cardChoice = int(input())
+        # remove chosen loot card from chosen player's hand and give to the user's hand
+        user.getHand().addCardBottom(chosenPlayer.getHand().getCard(cardChoice - 1))
+        chosenPlayer.getHand().removeCardIndex(cardChoice - 1)
+        message = f"Guppy's Head has been use and Player {user.getNumber()} was given a loot card from Player {chosenPlayer.getNumber()}"
+        Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -383,19 +460,19 @@ class GuppysPaw(GoldTreasure):
         room = user.getRoom()
         # check to see if they have hp to use the item
         if user.getCharacter().getHp() < 2:
-            print("Not enough hp")
+            message = "Not enough hp"
+            Json.systemOutput(message)
             return
         # choose a player prevent up to 2 damage
         user.getCharacter().setHp(user.getCharacter().getHp() - 1)
-        print("Choose a player to prevent next instance of damage up to 2")
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                print(f'{i + 1} :Yourself')
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
+        message = "Choose a player to prevent next instance of damage up to 2"
+        chosenPlayer = user.chooseAnyPlayer(message)
+        # create a reduce damage object and add it to chosen player inventory
         reduceDamage = ReduceDamage(2)
-        room.getPlayers()[playerChoice - 1].getCharacter().addInventory(reduceDamage)
+        chosenPlayer.getCharacter().addInventory(reduceDamage)
+        message = f"{chosenPlayer.getName()} next instance of damage will be reduced by 2"
+        Json.systemOutput(message)
+        self.tapped = True
         return
 
 # steal 3 cents from a player
@@ -405,28 +482,26 @@ class Jawbone(GoldTreasure):
         self.eternal = False
         self.name = "Jawbone"
         self.picture = "test image.jpg"
+
     def use(self, user):
         room = user.getRoom()
-        print("Which player do you want to steel up to 3 cents from")
-        # displays players
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                pass # don't display user using this item
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
+        message = "Which player do you want to steel up to 3 cents from"
+        chosenPlayer = user.getChosenPlayer(message, user)
         # check to see if chosen player has coins
-        if room.getPlayers()[playerChoice - 1].getCoins() == 0:
-            print("This player doesn't have 3 cents")
+        if chosenPlayer.getCoins() == 0:
+            message = "This player doesn't have 3 cents"
+            Json.systemOutput(message)
             return
         # if player has coins but less than 3, steel all their coins
-        elif room.getPlayers()[playerChoice -1].getCoins() < 3:
-            user.addCoins(room.getPlayers()[playerChoice - 1].getCoins())
-            room.getPlayers()[playerChoice - 1].subtractCoins(room.getPlayers()[playerChoice - 1].getCoins())
+        elif chosenPlayer.getCoins() < 3:
+            user.addCoins(chosenPlayer.getCoins())
+            chosenPlayer.subtractCoins(chosenPlayer.getCoins())
         # steel 3 coin from the player they choose
         else:
-            room.getPlayers()[playerChoice - 1].subtractCoins(3)
+            chosenPlayer.subtractCoins(3)
             user.addCoins(3)
+        message = f"Player {user.getNumber()} stole coins from Player {chosenPlayer.getNumber()}"
+        Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -443,19 +518,25 @@ class MiniMush(GoldTreasure):
         stack = room.getStack()
         dice = stack.findDice()
         val = 0
-        # loop until given valid input
-        while int(val) != 1 and int(val) != 2:
-            val = int(input("How much do you want to decrease; 1 or 2: "))
+        # ask how much to decrease the dice, up to 2
+        message = "How much do you want to decrease: 1 or 2?"
+        Json.choiceOutput(user.getSocketId(), message, ["1", "2"])
+        val = int(input())
         # if there is a die, update the die value
         if isinstance(dice, Dice) == True:
             if val == 1:
                 dice.incrementDown()
+                message = "Dice value has decreased by 1"
+                Json.systemOutput(message)
             elif val == 2:
                 dice.incrementDown()
                 dice.incrementDown()
+                message = "Dice value has decreased by 2"
+                Json.systemOutput(message)
             self.tapped = True
         else:
-            print("No dice found")
+            message = "No dice found"
+            Json.systemOutput(message)
         return
 
 # choose a non-eternal item, this becomes a copy of that item (permanent)
@@ -469,40 +550,41 @@ class ModelingClay(GoldTreasure):
     def use(self, user):
         room = user.getRoom()
         # Choose a player that you want to copy an item from
-        print("Which player do you want to copy one of their items")
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                print(f"{i + 1} :Yourself")
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
+        message = "Which player do you want to copy one of their items"
+        chosenPlayer = user.chooseAnyPlayer(message)
         # check to make sure that player has items to copy , check is one because they will always have eternal item
-        if room.getPlayers()[playerChoice - 1].getItems().getDeckLength() == 1:
-            print("Player doesn't have any copyable items")
+        if chosenPlayer.getItems().getDeckLength() <= 1:
+            message = "Player doesn't have any copyable items"
+            Json.systemOutput(message)
             return
         else:
             # remove this card from their items, have to remove here because error when they choose to copy one of their
             # own items
             for i in range(user.getItems().getDeckLength()):
-                if user.getItems().getCard(i - 1).getName() == "MODELING CLAY":
+                if user.getItems().getCard(i - 1).getName() == "Modeling Clay":
                     self.eternal = False
-                    modelingClay = user.getItems().getCard(i -1)
+                    modelingClay = user.getItems().getCard(i - 1)
                     user.getItems().removeCardIndex(i - 1)
+            # RETURN JSON GAME STATE
             # choose an item to copy
-            print("Choose which item to copy")
-            room.getPlayers()[playerChoice - 1].getItems().printCardListNames()
-            cardChoice = int(input("Choice: "))
+            message = "Choose which item to copy"
+            playerOption = []
+            for i in chosenPlayer.getItems().getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            cardChoice = int(input())
             # check to make sure selected card isn't an eternal item
-            if room.getPlayers()[playerChoice - 1].getItems().getCard(cardChoice - 1).getEternal() == True:
-                print("Can't choose an eternal item to copy")
+            if chosenPlayer.getItems().getCard(cardChoice - 1).getEternal() == True:
+                message = "Can't choose an eternal item to copy"
+                Json.systemOutput(message)
                 # give them modeling clay back
                 user.getItems().addCardBottom(modelingClay)
                 return
             else:
-                self.tapped = True
-                # then add chosen card to copy to their items
-                user.getItems().addCardBottom(room.getPlayers()[playerChoice - 1].getItems().getCard(cardChoice - 1))
-                return
+                # then add chosen card to copy to their items, use deepcopy to make sure it is a whole new card
+                chosenCard = copy.deepcopy(chosenPlayer.getItems().getCard(cardChoice - 1))
+                user.getItems().addCardBottom(chosenCard)
+            return
 
 # deal 1 damage to a monster
 class MrBoom(GoldTreasure):
@@ -513,14 +595,17 @@ class MrBoom(GoldTreasure):
         self.picture = "test image.jpg"
 
     def use(self, user):
-        room = user.getRoom()
         # display the active monsters
-        playerList = room.getPlayers()
         monsterList = user.getBoard().getMonsters()
-        for i in range(len(monsterList)):
-            print(f"{i + 1}:{monsterList[i][-1].getName()}\n  HP: {monsterList[i][-1].getHp()}")
-        target = int(input("Target which monster with " + str(self.getName()) + "? :"))
+        playerOptions = []
+        message = f"Target which monster with {self.getName()}?"
+        for i in monsterList:
+            playerOptions.append(i[-1].getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOptions)
+        target = int(input())
         # bomb monster
+        message = f"{user.getName()} did 1 damage to {user.getBoard().getMonsters()[target - 1][-1].getName()}"
+        Json.systemOutput(message)
         user.getBoard().getMonsters()[target - 1][-1].takeDamage(1, user)
         self.tapped = True
         return
@@ -534,19 +619,21 @@ class MysterySack(GoldTreasure):
         self.picture = "test image.jpg"
 
     def use(self, user):
-        dice = Dice()
-        user.addToStack(dice.roll())
-        diceResult = user.getRoom().getStack().findDice().getResult()
+        diceResult = rollDice(user)
         # loot 1
         if diceResult == 1 or diceResult == 2:
+            message = "You got a loot card"
+            Json.systemOutput(message)
             user.loot(1)
         # gain 4 cents
         elif diceResult == 3 or diceResult == 4:
+            message = "added 5 coins"
+            Json.systemOutput(message)
             user.addCoins(4)
         # rolls 5 or 6 nothing happens
         else:
-            print("Nothing happened")
-        user.getRoom().getStack().pop()  # pop off the dice after it was used
+            message = "Nothing happened"
+            Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -562,34 +649,47 @@ class PandorasBox(GoldTreasure):
     def use(self, user):
         # destroy this item
         for i in range(user.getItems().getDeckLength()):
-            if user.getItems().getCard(i - 1).getName() == "PANDORA'S BOX":
+            if user.getItems().getCard(i - 1).getName() == "Pandora's Box":
                 self.eternal = False
                 user.getItems().removeCardIndex(i - 1)
-        dice = Dice()
-        user.addToStack(dice.roll())
-        diceResult = user.getRoom().getStack().findDice().getResult()
+        # RETURN JSON GAME STATE
+        diceResult = rollDice(user)
         # gain 1 cent
         if diceResult == 1:
+            message = "You gained 1 coin"
+            Json.systemOutput(message)
             user.addCoins(1)
         # gain 6 cents
         elif diceResult == 2:
+            message = "You gained 6 coins"
+            Json.systemOutput(message)
             user.addCoins(6)
         # kill a monster
         elif diceResult == 3:
-            room = user.getRoom()
-            room.displayEntities()
-            index = int(input("Choose an character or monster to kill?"))
-            room.getEntity(index).die(user)
+            monsterList = user.getBoard().getMonsters()
+            message = "Choose a monster to kill"
+            playerOptions = []
+            for i in monsterList:
+                playerOptions.append(i[-1].getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOptions)
+            target = int(input())
+            user.getBoard().getMonsters()[target - 1][-1].die(user)
         # gain 3 loot
         elif diceResult == 4:
+            message = "You gained 3 loot cards"
+            Json.systemOutput(message)
             user.loot(3)
         # gain 9 cents
         elif diceResult == 5:
+            message = "You gained 9 coins"
+            Json.systemOutput(message)
             user.addCoins(9)
         # this becomes a soul
         elif diceResult == 6:
+            message = "You got 1 soul!"
+            Json.systemOutput(message)
             user.addSouls(1)
-        user.getRoom().getStack().pop()  # pop off the dice after it was used
+        return
 
 # put the top card of each deck into discard
 class PotatoPeeler(GoldTreasure):
@@ -602,12 +702,16 @@ class PotatoPeeler(GoldTreasure):
     def use(self, user):
         # get the top card from all deck then discard them to their respectful deck
         board = user.getRoom().getBoard()
+        # get top card from each deck
         lootCard = board.getLootDeck().deal()
         treasureCard = board.getTreasureDeck().deal()
         monsterCard = board.getMonsterDeck().deal()
+        # add the card to the discard of each deck
         board.getDiscardLootDeck().addCardTop(lootCard)
         board.getDiscardTreasureDeck().addCardTop(treasureCard)
         board.getDiscardMonsterDeck().addCardTop(monsterCard)
+        message = f"Top cards of all decks were discarded by {self.getName()}"
+        Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -620,19 +724,18 @@ class RazorBlade(GoldTreasure):
         self.picture = "test image.jpg"
 
     def use(self, user):
-        room = user.getRoom()
-        # display the characters in the room
-        playerList = room.getPlayers()
-        for i in range(len(playerList)):
-            print(
-                f"{1 + i}: {playerList[i].getCharacter().getName()}\n  HP: {playerList[i].getCharacter().getHp()}")
-        target = input("Target which player with " + str(self.getName()) + "? :")
+        # get a player
+        message = "Choose a player to take 1 damage"
+        chosenPlayer = user.chooseAnyPlayer(message)
         # deal 1 damage to selected player
-        room.getPlayers()[int(target) - 1].takeDamage(1, user)
+        message = f"Razor Blade did 1 damage to {chosenPlayer.getName()}"
+        Json.systemOutput(message)
+        chosenPlayer.takeDamage(1, user)
         self.tapped = True
         return
 
 # look at the top card of a deck, you may put that card on the bottom of that deck
+# TODO: check to see if we can display the card itself instead of just saying card name in options
 class SackHead(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -642,30 +745,58 @@ class SackHead(GoldTreasure):
 
     def use(self, user):
         board = user.getRoom().getBoard()
-        choice = int(input("Choose a deck to look at the top card\n1. Loot\n2. Monster\n3. Treasure\nChoice: "))
+        # ask user what deck they want to look top card of
+        message = "Choose a deck to look at the top card: Loot, Monster, Treasure"
+        Json.choiceOutput(user.getSocketId(), message, ["Loot", "Monster", "Treasure"])
+        choice = int(input())
+        # CHOICE JSON
+        # enter loot deck option
         if choice == 1:
             card = board.getLootDeck().deal()
-            print(f"The loot card is {card.getName()}")
-            cardDecision = int(input("Do you want to put this card on the bottom of the deck?\n1. Yes\n2. No\nChoice: "))
+            message = f"The loot card is {card.getName()}. Put it on the top or bottom of the deck?"
+            Json.choiceOutput(user.getSocketId(), message, ["Bottom", "Top"])
+            cardDecision = int(input())
+            # add card to bottom of loot deck
             if cardDecision == 1:
+                message = f"{card.getName()} was put at the bottom of the loot deck"
+                Json.systemOutput(message)
                 board.getLootDeck().addCardBottom(card)
+            # add card back to top of loot deck
             elif cardDecision == 2:
+                message = f"{card.getName()} was put at the top of the loot deck"
+                Json.systemOutput(message)
                 board.getLootDeck().addCardTop(card)
+        # enter monster deck option
         if choice == 2:
             card = board.getMonsterDeck().deal()
-            print(f"The monster card is {card.getName()}")
-            cardDecision = int(input("Do you want to put this card on the bottom of the deck?\n1. Yes\n2. No\nChoice: "))
+            message = f"The monster card is {card.getName()}. Put it on the top or bottom of the deck?"
+            Json.choiceOutput(user.getSocketId(), message, ["Bottom", "Top"])
+            cardDecision = int(input())
+            # add card to bottom of monster deck
             if cardDecision == 1:
+                message = f"{card.getName()} was put at the bottom of the monster deck"
+                Json.systemOutput(message)
                 board.getMonsterDeck().addCardBottom(card)
+            # add card back to top of monster deck
             elif cardDecision == 2:
+                message = f"{card.getName()} was put at the top of the monster deck"
+                Json.systemOutput(message)
                 board.getMonsterDeck().addCardTop(card)
+        # enter treasure deck option
         if choice == 3:
             card = board.getTreasureDeck().deal()
-            print(f"The loot card is {card.getName()}")
-            cardDecision = int(input("Do you want to put this card on the bottom of the deck?\n1. Yes\n2. No\nChoice: "))
+            message = f"The treasure card is {card.getName()}. Put it on the top or bottom of the deck?"
+            Json.choiceOutput(user.getSocketId(), message, ["Bottom", "Top"])
+            cardDecision = int(input())
+            # add card to bottom of treasure deck
             if cardDecision == 1:
+                message = f"{card.getName()} was put at the bottom of the treasure deck"
+                Json.systemOutput(message)
                 board.getTreasureDeck().addCardBottom(card)
+            # add card back to top of treasure deck
             elif cardDecision == 2:
+                message = f"{card.getName()} was put at the top of the treasure deck"
+                Json.systemOutput(message)
                 board.getTreasureDeck().addCardTop(card)
         self.tapped = True
         return
@@ -687,7 +818,8 @@ class SpoonBender(GoldTreasure):
             dice.incrementUp()
             self.tapped = True
         else:
-            print("No dice found")
+            message = "No dice found"
+            Json.systemOutput(message)
         return
 
 # Put a counter, use 3 counter and kill a player or monster
@@ -697,31 +829,34 @@ class TechX(GoldTreasure):
         self.eternal = False
         self.name = "Tech X"
         self.picture = "test image.jpg"
-        self.counter = 0
+        self.counter = 3
 
     def use(self, user):
-        choice = int(input("What do you want to do\n1.Add a counter\n2.Spend three counters "
-                           "kill a monster or player"))
+        message = "Choose to add a counter or spend 3 counters to kill a player or monster"
+        Json.choiceOutput(user.getSocketId(), message, ["Add a counter", "Kill monster or player"])
+        choice = int(input())
         # check to see if card is tapped when chosen to add a counter
         if choice == 1:
             if self.tapped == True:
-                print("This card is tapped")
+                message = "This card is tapped"
+                Json.systemOutput(message)
             else:
                 self.counter += 1
                 self.tapped == True
         # make sure they have enough counters to use second option
         elif choice == 2:
             if self.counter < 3:
-                print("Not enough counters")
+                message = "Not enough counters"
+                Json.systemOutput(message)
             else:
                 # choose an entity and kills it
-                room = user.getRoom()
-                room.displayEntities()
-                index = int(input("Choose an character or monster to kill?"))
-                room.getEntity(index).die(user)
+                self.counter -= 3
+                message = "Choose an character or monster to kill?"
+                chosenEntity = user.chooseAnyEntity(message)
+                chosenEntity.die(user)
         return
 
-# recharge an item
+# recharge an item, think this works because when adding all cards to a separate deck, it makes a shallow copy
 class TheBattery(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -733,12 +868,24 @@ class TheBattery(GoldTreasure):
         # choose an itme from all the items on the board and recharge it by setting tapped to false
         room = user.getRoom()
         allItems = Deck([])
+        itemChoice = []
+        # create a deck with all items on the board
         for i in range(len(room.getPlayers())):
             allItems.combineDeck(room.getPlayers()[i].getItems())
-        print("Choose an item to recharge")
-        allItems.printCardListNames()
-        choice = int(input("Choice: "))
+        # create an array of string of all items to pass into JSON
+        for i in allItems.getCardList():
+            itemChoice.append(i.getName())
+        message = "Choose an item to recharge"
+        Json.choiceOutput(user.getSocketId(), message, itemChoice)
+        choice = int(input())
+        # Check to see if they choose a passive item to prevent an error
+        if isinstance(allItems.getCard(choice - 1), SilverTreasure):
+            message = "Can't recharge a passive item"
+            Json.systemOutput(message)
+            return
         allItems.getCard(choice - 1).setTapped(False)
+        message = f"{allItems.getCard(choice - 1).getName()} has been recharged"
+        Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -752,28 +899,37 @@ class TheD100(GoldTreasure):
         self.picture = "test image.jpg"
 
     def use(self, user):
-        dice = Dice()
-        user.addToStack(dice.roll())
-        diceResult = user.getRoom().getStack().findDice().getResult()
+        diceResult = rollDice(user)
         # loot 1
         if diceResult == 1:
+            message = "You gained a loot card"
+            Json.systemOutput(message)
             user.loot(1)
         # loot 2
         elif diceResult == 2:
+            message = "You gained 2 loot cards"
+            Json.systemOutput(message)
             user.loot(2)
         # gain 3 cents
         elif diceResult == 3:
+            message = "You gained 3 coins"
+            Json.systemOutput(message)
             user.addCoins(3)
         # gain 4 cents
         elif diceResult == 4:
+            message = "You gained 4 coins"
+            Json.systemOutput(message)
             user.addCoins(4)
         # gain +1 hp
         elif diceResult == 5:
+            message = "You gained 1 hp until end of turn"
+            Json.systemOutput(message)
             user.addHp(1)
         # gain +1 attack
         elif diceResult == 6:
+            message = "You gained 1 attack until end of turn"
+            Json.systemOutput(message)
             user.addAttack(1)
-        user.getRoom().getStack().pop()  # pop off the dice after it was used
         self.tapped = True
         return
 
@@ -788,21 +944,29 @@ class TheD20(GoldTreasure):
     def use(self, user):
         room = user.getRoom()
         # choose a player to re-roll one of their items
-        print("Choose a player re-roll an item")
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                print(f'{i + 1} :Yourself')
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
-        if room.getPlayers()[playerChoice - 1].getItems().getDeckLength() < 2:
-            print("Player doesn't have an item to re-roll")
+        message = "Choose a player re-roll an item"
+        playerChoice = user.chooseAnyPlayer(message)
+        if playerChoice.getItems().getDeckLength() < 2:
+            message = "Player doesn't have an item to re-roll"
+            Json.systemOutput(message)
             return
-        print("Choose an item to re-roll")
-        room.getPlayers()[playerChoice - 1].getItems().printCardListNames()
-        cardChoice = int(input("Choice: "))
-        room.getPlayers()[playerChoice - 1].getItems().removeCardIndex(cardChoice - 1)
-        room.getPlayers()[playerChoice - 1].getItems().addCardBottom(room.getPlayers()[playerChoice - 1].drawTreasure(1))
+        # choose item from chosen player to re-roll one of their items
+        message = "Choose an item to re-roll"
+        playerOptions = []
+        for i in playerChoice.getItems().getCardList():
+            playerOptions.append(i.getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOptions)
+        cardChoice = int(input())
+        # make sure they can't destroy an eternal item
+        if playerChoice.getItems().getCard(cardChoice - 1).getEternal() == True:
+            message = "Can't choose an eternal item to destroy"
+            Json.systemOutput(message)
+            return
+        # discard the chosen item and then give chosen player item from top of treasure deck
+        room.getBoard().discardTreasure(playerChoice, cardChoice - 1)
+        playerChoice.getItems().addCardBottom(playerChoice.drawTreasure(1))
+        message = "An item got re-rolled"
+        Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -817,37 +981,35 @@ class TheD4(GoldTreasure):
     def use(self, user):
         room = user.getRoom()
         # choose a player to re-roll all of their items
-        print("Choose a player to re-roll all their items")
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                print(f'{i + 1} :Yourself')
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
-        if room.getPlayers()[playerChoice - 1].getItems().getDeckLength() < 2:
-            print("Player doesn't have an item to re-roll")
+        message = "Choose a player to re-roll all their items"
+        playerChoice = user.chooseAnyPlayer(message)
+        if playerChoice.getItems().getDeckLength() < 2:
+            message = "Player doesn't have an item to re-roll"
+            Json.systemOutput(message)
             return
         # destroy this item
         for i in range(user.getItems().getDeckLength()):
-            if user.getItems().getCard(i - 1).getName() == "THE D4":
+            if user.getItems().getCard(i - 1).getName() == "The D4":
                 self.eternal = False
                 user.getItems().removeCardIndex(i - 1)
-        itemAmount = room.getPlayers()[playerChoice - 1].getItems().getDeckLength() - 1  # subtract because of 1 eternal
+        # RETURN JSON GAME STATE
+        itemAmount = playerChoice.getItems().getDeckLength() - 1  # subtract because of 1 eternal
         cardsDeleted = 0
-        for i in range(room.getPlayers()[playerChoice - 1].getItems().getDeckLength()):
+        for i in range(playerChoice.getItems().getDeckLength()):
             i -= cardsDeleted  # prevent index error as we delete items in the list
-            if (room.getPlayers()[playerChoice - 1].getItems().getCard(i).getEternal() is True):
-                pass # don't discard the item since it is eternal
+            if playerChoice.getItems().getCard(i).getEternal() is True:
+                pass  # don't discard the item since it is eternal
             else:
-                # discard item card to the discard pile
-                card = room.getPlayers()[playerChoice - 1].getItems().getCard(i)
-                room.getPlayers()[playerChoice - 1].getItems().removeCardIndex(i)
-                room.getBoard().getDiscardTreasureDeck().addCardTop(card)
+                # discard the treasure card
+                room.getBoard().discardTreasure(playerChoice, i)
                 cardsDeleted += 1
-        # after discard all their item cards, draw treasure cards based on number of items destroyed
+        # after discard all their item cards, draw treasure cards based on number of items discarded
         for i in range(itemAmount):
-            room.getPlayers()[playerChoice - 1].getItems().addCardBottom(room.getPlayers()[playerChoice - 1].drawTreasure(1))
+            playerChoice.getItems().addCardBottom(playerChoice.drawTreasure(1))
+        message = f"Player {playerChoice.getNumber()} had all their items rerolled"
+        Json.systemOutput(message)
         return
+
 
 # pay 4 cents, recharge an item
 class BatteryBum(GoldTreasure):
@@ -860,20 +1022,34 @@ class BatteryBum(GoldTreasure):
     def use(self, user):
         # check to make sure they have enough coins
         if user.getCoins() < 4:
-            print("Not enough coins")
+            message = "Not enough coins"
+            Json.systemOutput(message)
             return
         # subtract 4 coins and recharge an item they choose
         else:
             user.subtractCoins(4)
             room = user.getRoom()
             allItems = Deck([])
+            itemChoice = []
+            # create a deck with all items on the board
             for i in range(len(room.getPlayers())):
                 allItems.combineDeck(room.getPlayers()[i].getItems())
-            print("Choose an item to recharge")
-            allItems.printCardListNames()
-            choice = int(input("Choice: "))
+            # create an array of string of all items to pass into JSON
+            for i in allItems.getCardList():
+                itemChoice.append(i.getName())
+            message = "Choose an item to recharge"
+            Json.choiceOutput(user.getSocketId(), message, itemChoice)
+            choice = int(input())
+            # Check to see if they choose a passive item to prevent an error
+            if isinstance(allItems.getCard(choice - 1), SilverTreasure):
+                message = "Can't recharge a passive item"
+                Json.systemOutput(message)
+                return
             allItems.getCard(choice - 1).setTapped(False)
+            message = f"{allItems.getCard(choice - 1).getName()} has been recharged"
+            Json.systemOutput(message)
         return
+
 
 # Destroy two items you control, steal a non-eternal item
 class ContractFromBelow(GoldTreasure):
@@ -886,36 +1062,49 @@ class ContractFromBelow(GoldTreasure):
     def use(self, user):
         room = user.getRoom()
         if user.getItems().getDeckLength() < 2:
-            print("Not enough items to destroy")
+            message = "Not enough items to destroy"
+            Json.systemOutput(message)
         else:
             # choose a player to steal one of their items
-            print("Choose a player to steal one of their items")
-            for i in range(len(room.getPlayers())):
-                if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                    pass  # skip listing current user
-                else:
-                    print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-            playerChoice = int(input("Choice: "))
-            if room.getPlayers()[playerChoice - 1].getItems().getDeckLength() < 2:
-                print("Player doesn't have an item to re-roll")
+            message = "Choose a player to steal one of their items"
+            playerChoice = user.getChosenPlayer(message, user)
+            if playerChoice.getItems().getDeckLength() < 2:
+                message = "Player doesn't have an item to re-roll"
+                Json.systemOutput(message)
                 return
             loop = 0
             # loop until two items are destroyed
             while loop != 2:
-                print("Which item do you want to destroy")
-                user.getItems().printCardListNames()
-                choice = int(input("Choice: "))
+                message = "Which item do you want to destroy"
+                playerOption = []
+                for i in user.getItems().getCardList():
+                    playerOption.append(i.getName())
+                Json.choiceOutput(user.getSocketId(), message, playerOption)
+                choice = int(input())
                 if user.getItems().getCard(choice - 1).getEternal() is True:
-                    print("Can't destroy an eteranl item")
+                    message = "Can't destroy an eteranl item"
+                    Json.systemOutput(message)
                 else:
-                    user.getItems().removeCardIndex(choice - 1)
+                    room.getBoard().discardTreasure(user, choice - 1)
                     loop += 1
             # after two items are deleted, take a card from selected player
-            print("Choose which item to steal")
-            room.getPlayers()[playerChoice - 1].getItems().printCardListNames()
-            cardChoice = int(input("Choice: "))
-            user.getItems().addCardBottom(room.getPlayers()[playerChoice - 1].getItems().getCard(cardChoice - 1))
-            room.getPlayers()[playerChoice - 1].getItems().removeCardIndex(cardChoice - 1)
+            message = "Choose which item to steal"
+            playerOption = []
+            for i in playerChoice.getItems().getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            cardChoice = int(input())
+            # check to make sure they don't steal an eternal item
+            if playerChoice.getItems().getCard(cardChoice - 1).getEternal() == True:
+                message = "Can't choose an eternal item to steal"
+                Json.systemOutput(message)
+                return
+            # steal the chosen card from the chosen player
+            message = f"Player {user.getNumber()} stole " \
+                      f"{playerChoice.getItems().getCard(cardChoice - 1).getName()} from Player"\
+                      f" {playerChoice.getNumber()}"
+            Json.systemOutput(message)
+            room.getBoard().stealTreasure(user, playerChoice, cardChoice - 1)
         return
 
 # give another player a non-eternal item you control, gain 8 cents
@@ -930,32 +1119,33 @@ class DonationMachine(GoldTreasure):
         room = user.getRoom()
         # user will always have 1 eternal item, need at least another item
         if user.getItems().getDeckLength() < 2:
-            print("don't have an non-eternal item")
+            message = "don't have an non-eternal item"
+            Json.systemOutput(message)
             return
-        print("Who do you want to give an item")
-        # list players for them to choose
-        for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                pass
-            else:
-                print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-        playerChoice = int(input("Choice: "))
-        print("which item do you want to give")
+        message = "Who do you want to give an item"
+        playerChoice = user.getChosenPlayer(message, user)
+        message = "choose an item do you want to give"
         valid = False
         # loop until they choose a non-eternal item
         while valid is False:
-            user.getItems().printCardListNames()
-            cardChoice = int(input("Choice: "))
+            playerOption = []
+            for i in user.getItems().getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            cardChoice = int(input())
             if user.getItems().getCard(cardChoice - 1).getEternal() is True:
-                print("Can't choose an eternal item")
+                message = "Can't choose an eternal item"
+                Json.systemOutput(message)
             else:
                 valid = True
-        # give chosen item to chosen player and remove chosen card from user who used this card
-        card = user.getItems().getCard(cardChoice - 1)
-        user.getItems().removeCardIndex(cardChoice - 1)
-        room.getPlayers()[playerChoice - 1].getItems().addCardBottom(card)
+        # have chosen player steal card from the use
+        message = f"Player {user.getNumber()} gained 8 coins but has given "\
+                  f"{user.getItems().getCard(cardChoice - 1).getName()} to Player {playerChoice.getNumber()}"
+        Json.systemOutput(message)
+        room.getBoard().stealTreasure(playerChoice, user, cardChoice - 1)
         user.addCoins(8)
         return
+
 
 # Pay 5 cents, deal 1 damage to monster or player
 class GoldenRazorBlade(GoldTreasure):
@@ -967,26 +1157,19 @@ class GoldenRazorBlade(GoldTreasure):
 
     def use(self, user):
         if user.getCoins() < 5:
-            print("Don't have enough coins")
+            message = "Don't have enough coins"
+            Json.systemOutput(message)
         else:
             user.subtractCoins(5)
-            room = user.getRoom()
             # display the characters in the room
-            playerList = room.getPlayers()
-            for i in range(len(playerList)):
-                print(
-                    f"{1 + i}: {playerList[i].getCharacter().getName()}\n  HP: {playerList[i].getCharacter().getHp()}")
-            # display the active monsters
-            monsterList = user.getBoard().getMonsters()
-            for i in range(len(monsterList)):
-                print(f"{len(playerList) + i + 1}: {monsterList[i][-1].getName()}\n  HP: {monsterList[i][-1].getHp()}")
-            target = input("Target which creature with " + str(self.getName()) + "? :")
-            # bomb the selected target
-            if int(target) <= len(playerList):  # deal 1 damage to player
-                room.getPlayers()[int(target) - 1].takeDamage(1, user)
-            else:  # deal 1 damage to monster
-                user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][-1].takeDamage(1, user)
+            message = f"Target which creature with {self.name}"
+            chosenEntity = user.chooseAnyEntity(message)
+            # Golden Razor the selected target
+            message = f"{self.name} did 1 damage to {chosenEntity.getName()}"
+            Json.systemOutput(message)
+            chosenEntity.takeDamage(1, user)
         return
+
 
 # pay 10 cents, steal a non-eternal item a player controls
 class PayToPlay(GoldTreasure):
@@ -999,27 +1182,34 @@ class PayToPlay(GoldTreasure):
     def use(self, user):
         room = user.getRoom()
         if user.getCoins() < 10:
-            print("Don't have enough coins")
+            message = "Don't have enough coins"
+            Json.systemOutput(message)
         else:
             # choose a player to steal one of their items
-            print("Choose a player to steal one of their items")
-            for i in range(len(room.getPlayers())):
-                if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                    pass  # skip listing current user
-                else:
-                    print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-            playerChoice = int(input("Choice: "))
-            if room.getPlayers()[playerChoice - 1].getItems().getDeckLength() < 2:
-                print("Player doesn't have an item to re-roll")
+            message = "Choose a player to steal one of their items"
+            playerChoice = user.getChosenPlayer(message, user)
+            if playerChoice.getItems().getDeckLength() < 2:
+                message = "Player doesn't have an item to re-roll"
+                Json.systemOutput(message)
                 return
             # choose a card to steal
-            print("Choose which item to steal")
-            room.getPlayers()[playerChoice - 1].getItems().printCardListNames()
-            cardChoice = int(input("Choice: "))
-            # add chosen card to users items
-            user.getItems().addCardBottom(room.getPlayers()[playerChoice - 1].getItems().getCard(cardChoice - 1))
-            # remove card from chosen player items
-            room.getPlayers()[playerChoice - 1].getItems().removeCardIndex(cardChoice - 1)
+            message = "Choose which item to steal"
+            playerOption = []
+            for i in playerChoice.getItems().getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            cardChoice = int(input())
+            # check to make sure they don't steal an eternal item
+            if playerChoice.getItems().getCard(cardChoice - 1).getEternal() == True:
+                message = "Can't choose an eternal item to destroy"
+                Json.systemOutput(message)
+                return
+            # steal stolen treasure from chosen player
+            message = f"Player {user.getNumber()} spent 10 coins to steal "\
+                      f"{playerChoice.getItems().getCard(cardChoice - 1).getName()} "\
+                      f"from Player {playerChoice.getNumber()}"
+            Json.systemOutput(message)
+            room.getBoard().stealTreasure(user, playerChoice, cardChoice - 1)
             user.subtractCoins(10)
         return
 
@@ -1033,23 +1223,26 @@ class PortableSlotMachine(GoldTreasure):
 
     def use(self, user):
         if user.getCoins() < 3:
-            print("Don't have enough coins")
+            message = "Don't have enough coins"
+            Json.systemOutput(message)
         else:
             # subtract 3 coins then roll the dice
             user.subtractCoins(3)
-            dice = Dice()
-            user.addToStack(dice.roll())
-            diceResult = user.getRoom().getStack().findDice().getResult()
+            diceResult = rollDice(user)
             # loot 1
             if diceResult == 1 or diceResult == 2:
+                message = "You gained a loot card"
+                Json.systemOutput(message)
                 user.loot(1)
             # gain 4 cents
             elif diceResult == 3 or diceResult == 4:
+                message = "You gained 4 coins"
+                Json.systemOutput(message)
                 user.addCoins(4)
             # rolls 5 or 6 nothing happens
             else:
-                print("Nothing happened")
-            user.getRoom().getStack().pop()  # pop off the dice after it was used
+                message = "Nothing happened"
+                Json.systemOutput(message)
         return
 
 # discard a loot card, gain three cents
@@ -1062,10 +1255,20 @@ class Smelter(GoldTreasure):
 
     def use(self, user):
         # ask for a loot card from their hand to discard, then gain 3 cents
-        print("Which loot card do you want to discard")
-        user.getHand().printCardListNames()
-        choice = int(input("Choice: "))
+        message = "Choose a loot card do you want to discard"
+        playerOption = []
+        for i in user.getHand().getCardList():
+            playerOption.append(i.getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOption)
+        choice = int(input())
+        message = f"Player {user.getNumber()} discarded {user.getHand().getCard(choice - 1).getName()} for 3 cents"
+        Json.systemOutput(message)
+        # save card to put in discard deck
+        card = user.getHand().getCard(choice - 1)
+        # remove card from user's hand
         user.getHand().removeCardIndex(choice - 1)
+        # add card to loot discard deck and then have user gain 3 coins
+        user.getRoom().getBoard().getDiscardLootDeck().addCardTop(card)
         user.addCoins(3)
         return
 
@@ -1106,4 +1309,3 @@ def createTreasureCards():
     treasureDeck.addCardBottom(PortableSlotMachine(" ", " ", False))
     treasureDeck.addCardBottom(Smelter(" ", " ", False))
     return treasureDeck
-

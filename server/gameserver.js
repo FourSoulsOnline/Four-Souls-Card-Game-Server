@@ -8,6 +8,11 @@ import cors from "cors";
 import http from "http";
 // Get the Server class from socket.io
 import { Server } from "socket.io";
+// Get child process library
+import childProcess from "child_process";
+import zlib from "zlib";
+
+const spawner = childProcess.spawn;
 
 // Use gameServer as an instance of express
 const gameServer = express();
@@ -45,6 +50,9 @@ function getList(socketsInRoom) {
   }
   return list;
 }
+
+// Dictionary to store child processes for each room.
+const pythonProcesses = {};
 
 // Listen for connection event to know someone connected to server
 io.on("connection", async (socket) => {
@@ -113,8 +121,159 @@ io.on("connection", async (socket) => {
   });
 
   // Tell all users in same room to start game - O.S.
-  socket.on("start-game", (path) => {
+  socket.on("start-game", async (path) => {
+    console.log("The Room - " + socket.data.room + " - has started a game");
+
+    // Get list of players in the room - D.D.
+    var socketsInRoom = await io.in(socket.data.room).fetchSockets();
+    var listOfUsers = getList(socketsInRoom);
+    // Construct input obj to pass to python process - D.D.
+    const users_obj = {
+      players: listOfUsers,
+    };
+
     io.to(socket.data.room).emit("start-game", path);
+
+    // Below are different python processes we can use to run when a game has started.
+
+    // const python_process = spawner('python', ['./game constructs/testing.py'])
+    // Start the python process, JSON.stringify to pass as valid JSON object. - D.D.
+    // const python_process = spawner('python3', ['./script.py', JSON.stringify(users_obj)])
+    // const python_process = spawner('python', ['./game constructs/StartGame.py', JSON.stringify(users_obj)])
+    // const python_process = spawner('python', ['./game constructs/testingInput.py'])
+    const python_process = spawner("python3", [
+      "./game constructs/TestingDiscardDeck.py",
+    ]);
+
+    // Add current python process to list of python processes that are currently running - D.D.
+    // NOTE: need to add function where if a room is empty, or if a client has left, then kill the process
+    // and delete the process from the dictionary/list. - D.D.
+    pythonProcesses[socket.data.room] = python_process;
+
+    // only add one event listener for the python process - D.D.
+    // Do all of the output parsing in this area, you can emit to specific clients - D.D.
+    pythonProcesses[socket.data.room].stdout.on("data", function (data) {
+      try {
+        // this is how we'd compress data... we might use this later.
+        // if we do, change the switch case to be jsonData['messageFlag']
+        // and then change the io message to jsonData
+        // const buffer = Buffer.from(data, 'binary');
+        // const decompressedData = zlib.gunzipSync(buffer);
+        // const jsonString = decompressedData.toString();
+        // const jsonData = JSON.parse(jsonString)
+        // console.log(jsonData)
+
+        var jsonMessage = JSON.parse(data);
+        io.to(socket.data.room).emit("valid-json", JSON.parse(data));
+
+        switch (jsonMessage["messageFlag"]) {
+          case "PLAYER-HAND":
+            console.log(
+              "Server Found Flag: Player-Hand, sending to: " +
+                jsonMessage["socketID"]
+            );
+            io.to(jsonMessage["socketID"]).emit(
+              "player-hand-update",
+              JSON.parse(data)
+            );
+            break;
+
+          case "PLAYER-BOARD":
+            console.log("Server Found Flag: Player-Board Flag");
+            io.to(socket.data.room).emit(
+              "player-board-update",
+              JSON.parse(data)
+            );
+            break;
+
+          case "CHOICE":
+            console.log("Server Found Flag: Choice Flag");
+            // NOTE: need to send to specific player... for now, sending to entire room for testing.
+            io.to(socket.data.room).emit("choice-update", JSON.parse(data));
+            // io.to(jsonMessage['socketID']).emit("choice-update", JSON.parse(data))
+            break;
+
+          case "SYSTEM":
+            console.log("Server Found Flag: System Flag");
+            io.to(socket.data.room).emit(
+              "system-message-update",
+              JSON.parse(data)
+            );
+            break;
+
+          case "PLAYER-LIST":
+            console.log("Server Found Flag: Player-List Flag");
+            io.to(socket.data.room).emit(
+              "player-list-update",
+              JSON.parse(data)
+            );
+            break;
+
+          case "DICE":
+            console.log("Server Found Flag: Dice Flag");
+            io.to(socket.data.room).emit("dice-update", JSON.parse(data));
+            break;
+
+          case "TREASURE":
+            console.log("Server Found Flag: Treasure Flag");
+            io.to(socket.data.room).emit("treasure-update", JSON.parse(data));
+            break;
+
+          case "MONSTER":
+            console.log("Server Found Flag: Monster Flag");
+            io.to(socket.data.room).emit("monster-update", JSON.parse(data));
+            break;
+
+          case "DISCARD-LOOT":
+            console.log("Server Found Flag: Discard Loot Flag");
+            io.to(socket.data.room).emit(
+              "discard-loot-update",
+              JSON.parse(data)
+            );
+            break;
+
+          case "DISCARD-TREASURE":
+            console.log("Server Found Flag: Discard Treasure Flag");
+            io.to(socket.data.room).emit(
+              "discard-treasure-update",
+              JSON.parse(data)
+            );
+            break;
+
+          case "DISCARD-MONSTER":
+            console.log("Server Found Flag: Discard Monster Flag");
+            io.to(socket.data.room).emit(
+              "discard-monster-update",
+              JSON.parse(data)
+            );
+            break;
+
+          default:
+            console.log("Server Found Unknown Flag: " + data.toString());
+            break;
+        }
+      } catch (e) {
+        console.log(e);
+      }
+      console.log("Server received Python data: " + data.toString());
+      io.to(socket.data.room).emit("from-python", data.toString());
+    });
+
+    // listen to errors from the game - D.D.
+    pythonProcesses[socket.data.room].stderr.on("data", (data) => {
+      console.error(data.toString());
+    });
+  });
+
+  // Allow Users to access Game Board/Python Process commands. - D.D.
+  socket.on("game-board-command", (data) => {
+    const process = pythonProcesses[socket.data.room];
+
+    socket.on("game-board-message", (data) => {
+      console.log("Server Received Message: " + data);
+      process.stdin.write(data + "\n");
+      io.to(socket.data.room).emit("game-board-receive", "we received it");
+    });
   });
 
   // Send a console log when a socket gets disconnected

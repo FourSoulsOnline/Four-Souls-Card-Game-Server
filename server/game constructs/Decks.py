@@ -34,7 +34,7 @@ class Deck:
     def getJsonObject(self):
         if len(self.cardList) == 0:
             deckObject = {
-                "cards": ["no cards in deck (Decks.py)"]
+                "cards": []
             }
         else:
             cardsJsonObjects = []
@@ -44,6 +44,15 @@ class Deck:
                 "cards": cardsJsonObjects,
             }
         return deckObject
+    
+    def getCardNamesAsJson(self):
+        if len(self.cardList) == 0:
+            return []
+        else:
+            cardNames = []
+            for i in range(len(self.cardList)):
+                cardNames.append(self.cardList[i].getName())
+            return cardNames
 
     # other functions
 

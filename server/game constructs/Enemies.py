@@ -3,7 +3,6 @@
 File containing the creation of Enemy cards
 '''
 
-# from PIL import Image
 from Decks import Deck
 from Cards import Enemy
 from Cards import Entity
@@ -14,29 +13,23 @@ from TreasureReward import TreasureReward
 from Player import Player
 from Dice import Dice
 from Dice import rollDice
+from JsonOutputHelper import JsonOutputHelper
 import random
+Json = JsonOutputHelper()
 
 def lootX(attacker):
     # loot X cards
-    lootDice = Dice()
-    attacker.addToStack(lootDice.roll())
-    # use any cards played in response to the added dice before the dice resolves
-    while attacker.getRoom().getStack().getStack()[-1][0] != lootDice:
-        attacker.getRoom().getStack().useTop()
-    # take the dice off the stack
-    attacker.getStack().useTop()
-    count = lootDice.getResult()
+    message = f"Player {attacker.getNumber()} rolls for loot reward..."
+    Json.systemOutput(message)
+    count = rollDice(attacker)
     attacker.loot(count)
     return count
 
 def coinX(attacker):
-    # loot X cards
-    coinDice = Dice()
-    attacker.addToStack(coinDice.roll())
-    # use any cards played in response to the added dice before the dice resolves
-    while attacker.getRoom().getStack().getStack()[-1][0] != coinDice:
-        attacker.getRoom().getStack().useTop()
-    count = coinDice.getResult()
+    # gain X coins
+    message = f"Player {attacker.getNumber()} rolls for coin reward..."
+    Json.systemOutput(message)
+    count = rollDice(attacker)
     attacker.addCoins(count)
     return count
 
@@ -93,6 +86,8 @@ class monsterDieExtraAttack(Enemy):
         self.hp = maxHp
 
     def dieEffect(self, attacker):
+        message = f"Player {attacker.getRoom().getActivePlayerIndex() + 1} can attack an additional time this turn ({self.name})."
+        Json.systemOutput(message)
         attacker.getCharacter().addAttacksLeft()
         return
 
@@ -108,6 +103,8 @@ class monsterDieRevengeDamage(Enemy):
         # loot X cards
         lootX(activePlayer)
         # deal 1 damage to that player
+        message = f"{self.name} explodes, dealing 1 damage to Player {attacker.getNumber()}."
+        Json.systemOutput(message)
         attacker.takeDamage(1, self)
         return
 
@@ -120,6 +117,8 @@ class monsterDieDamageAllPlayers(Enemy):
     # TODO: im pretty sure this will throw an error if a non player kills this
     def dieEffect(self, attacker):
         playerList = attacker.getRoom().getPlayers()
+        message = f"{self.name} explodes, dealing 1 damage to all players!"
+        Json.systemOutput(message)
         for i in range(len(playerList)):
             # deal damage to each player in turn order, starting with the active player
             playerList[(attacker.getNumber() - 1 + i) % len(playerList)].takeDamage(1, self)
@@ -136,17 +135,16 @@ class monsterDieChooseDiscard(Enemy):
     def dieEffect(self, attacker):
         # choose a player to discard
         attacker.getRoom().displayCharacters()
-        # TODO: only allow the active player to make this choice
-        playerIndex = int(input("Choose a player to discard 2 loot cards: "))
-        chosenPlayer = attacker.getRoom().getPlayers()[playerIndex - 1]
+        message = "Force which player to discard 2 loot cards? >:)"
+        chosenPlayer = activePlayer.getChosenPlayer(message, activePlayer)
         # discard 2 loot cards
+        message = f"Player {attacker.getRoom().getActivePlayerIndex+1} forces Player {playerIndex} to discard 2 loot cards ({self.name})!"
+        Json.systemOutput(message)
         for i in range(self.num):
             # show loot cards in hand
             chosenPlayer.getHand().printCardListNames()
-            # TODO: only the player chosen by the active player should get this choice
             # remove the card
-            chosenCard = int(input(f"Player {chosenPlayer.getNumber()}, choose a loot card to discard: "))
-            chosenPlayer.getHand().removeCardIndex(chosenCard - 1)
+            chosenPlayer.chooseDiscard(1, chosenPlayer)
         return
 
 # when this dies on an attack roll of 6, double its rewards (DINGA)
@@ -164,8 +162,9 @@ class monsterDieDinga(Enemy):
         doubled = False
         # check if stack element above this is a dice result 6
         try:
-            if isinstance(stack.getStack()[1][0], Dice) and (stack.getStack()[1][0].getResult() == 6):
-                doubled = True
+            if isinstance(stack.getLastResolved()[0], Dice):
+                if stack.getLastResolved()[0].getResult() == 6:
+                    doubled = True
         except:
             pass
         # identify active player
@@ -173,6 +172,8 @@ class monsterDieDinga(Enemy):
         # gain x cents (possibly doubled)
         count = coinX(activePlayer)
         if doubled == True:
+            message = f"{self.name} dies on an attack roll of 6. Player {attacker.getRoom().getActivePlayerIndex+1} gains doubled rewards!"
+            Json.systemOutput(message)
             activePlayer.addCoins(count)
         return
 
@@ -203,9 +204,13 @@ class monsterHurtSplash(Enemy):
         players = attacker.getRoom().getPlayers()
         # deal damage to left/right player
         if self.lr == "left":
+            message = f"Player {(activePlayerIndex - 1) % 4} receives {num} splash damage from Player {attacker.getNumber()}'s attack!"
+            Json.systemOutput(message)
             leftPlayer = players[(activePlayerIndex - 1) % 4]
             leftPlayer.takeDamage(num, attacker)
         elif self.lr == "right":
+            message = f"Player {(activePlayerIndex + 1) % 4} receives {num} splash damage from Player {attacker.getNumber()}'s attack!"
+            Json.systemOutput(message)
             rightPlayer = players[(activePlayerIndex + 1) % 4]
             rightPlayer.takeDamage(num, attacker)
         else:
@@ -221,10 +226,11 @@ class monsterDieGreedling(Enemy):
     def dieEffect(self, attacker):
         # choose a player to discard
         attacker.getRoom().displayCharacters()
-        # TODO: only allow the active player to make this choice
-        playerIndex = int(input("Choose a player to lose 7 cents: "))
-        chosenPlayer = attacker.getRoom().getPlayers()[playerIndex - 1]
+        message = "Force which player to lose 7 cents? >:)"
+        chosenPlayer = activePlayer.getChosenPlayer(message, activePlayer)
         # lose 7c
+        message = f"Player {attacker.getRoom().getActivePlayerIndex+1} steals 7 cents from Player {playerIndex} ({self.name})!"
+        Json.systemOutput(message)
         chosenPlayer.subtractCoins(7)
         return
 
@@ -236,6 +242,8 @@ class monsterDieExpandShop(Enemy):
         self.slots = slots
 
     def dieEffect(self, attacker):
+        message = f"{self.name} reveals 2 new shop slots."
+        Json.systemOutput(message)
         for i in range(self.slots):
             attacker.getRoom().getBoard().addTreasureSlot()
             attacker.getRoom().getBoard().checkTreasureSlots()
@@ -250,12 +258,13 @@ class monsterRollImmunity(Enemy):
 
     def takeDamage(self, num, attacker):
         # if the stack element above this monster is a dice and it is a 6
-        if len(attacker.getRoom().getStack().getStack()) > 1:
-            if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
-                result = attacker.getRoom().getStack().getStack()[1][0].getResult()
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
+                result = attacker.getRoom().getStack().getLastResolved()[0].getResult()
                 if result == 6:
                     # return without dealing damage
-                    print("\nDamage roll immunity!")
+                    message = f"{self.name} evades damage on attack rolls of 6. :("
+                    Json.systemOutput(message)
                     return
         # take damage as normal
         Entity.takeDamage(self, num, attacker)
@@ -270,13 +279,14 @@ class monsterRollHorf(Enemy):
     def dealDamage(self, num, target):
         atk = self.attack
         # if index 1 on the stack is a dice roll and a 2
-        if len(target.getRoom().getStack().getStack()) > 1:
-            if isinstance(target.getRoom().getStack().getStack()[1][0], Dice):
-                result = target.getRoom().getStack().getStack()[1][0].getResult()
+        if len(target.getRoom().getStack().getStack()) == 1:
+            if isinstance(target.getRoom().getStack().getLastResolved()[0], Dice):
+                result = target.getRoom().getStack().getLastResolved()[0].getResult()
                 if result == 2:
                     # increase attack by 1
                     self.setAttack(atk + 1)
-                    print("HORF deals bonus damage this turn!")
+                    message = f"{self.name} deals bonus damage this turn!"
+                    Json.systemOutput(message)
         Entity.dealDamage(self, self.attack, target)
         # return attack to normal
         self.setAttack(atk)
@@ -291,13 +301,14 @@ class monsterRollLeaper(Enemy):
     def dealDamage(self, num, target):
         atk = self.attack
         # if index 1 on the stack is a dice roll and a 2
-        if len(attacker.getRoom().getStack().getStack()) > 1:
-            if isinstance(target.getRoom().getStack().getStack()[1][0], Dice):
-                result = target.getRoom().getStack().getStack()[1][0].getResult()
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(target.getRoom().getStack().getLastResolved()[0], Dice):
+                result = target.getRoom().getStack().getLastResolved()[0].getResult()
                 if result == 1:
                     # double attack
                     self.setAttack(atk + atk)
-                    print("LEAPER deals bonus damage this roll!")
+                    message = f"{self.name} deals bonus damage on attack rolls of 1!"
+                    Json.systemOutput(message)
         Entity.dealDamage(self, self.attack, target)
         # return attack to normal
         self.setAttack(atk)
@@ -310,7 +321,8 @@ class monsterDamageKeeperHead(Enemy):
         self.hp = maxHp
 
     def damageEffect(self, target):
-        print("KEEPER HEAD steals two of your coins!\n")
+        message = f"{self.name} steals two of Player {target.getNumber()}'s coins!"
+        Json.systemOutput(message)
         target.subtractCoins(2)
         return
 
@@ -335,15 +347,7 @@ class monsterDieMomsDeadHand(Enemy):
         activePlayer = room.getActivePlayer()
         # choose a player
         room.displayCharacters()
-        num = int(input("Steal an item from which player?: "))
-        num -= 1
-        # display player items
-        if room.getPlayers()[num].getItems().getDeckLength() > 0: # skip item stealing if chosen player has no items
-            room.getPlayers()[num].getItems().printCardListNames()
-            # choose an item to steal
-            num = int(input("Which item to steal?: "))
-            item = room.getPlayers()[num].getItems().removeCardIndex(num)
-            activePlayer.addToItems(item)
+        activePlayer.chooseItemSteal()
         return
 
 # when this dies, the active player deals 3 damage to a player (MULLIBOOM)
@@ -359,10 +363,10 @@ class monsterDieMulliboom(Enemy):
         activePlayer = room.getActivePlayer()
         # choose a player
         room.displayCharacters()
-        num = int(input("Deal 3 damage to which player?: "))
-        num -= 1
-        # deal damage
-        chosenPlayer = room.getPlayers()[num]
+        message = "Deal 3 damage to which player?"
+        chosenPlayer = activePlayer.chooseAnyPlayer(message)
+        message = f"Player {activePlayer.getNumber()} blows up {self.name} next to Player {num+1}!!"
+        Json.systemOutput(message)
         activePlayer.dealDamage(3, chosenPlayer)
         return
 
@@ -376,7 +380,8 @@ class monsterDieMulligan(Enemy):
         # get board
         board = attacker.getRoom().getBoard()
         board.addMonsterSlot()
-        print("More monsters appeared!\n")
+        message = f"More monsters appeared! ({self.name})"
+        Json.systemOutput(message)
         return
 
 # when this dies, the active player recharges each item they control (PSY HORF)
@@ -388,11 +393,11 @@ class monsterDiePsyHorf(Enemy):
     def dieEffect(self, attacker):
         # get room
         room = attacker.getRoom()
-        # get board
-        board = attacker.getRoom().getBoard()
         # get active player
         activePlayer = room.getActivePlayer()
         itemDeck = activePlayer.getItems()
+        message = f"Player {activePlayer.getNumber()} uses {self.name}'s psychic power to recharge all their items."
+        Json.systemOutput(message)
         for i in range(itemDeck.getDeckLength()):
             if isinstance(activePlayer.getItems().getCardList()[i], GoldTreasure):
                 activePlayer.getItems().getCardList()[i].setTapped(False)
@@ -406,15 +411,16 @@ class monsterDamageRageCreep(Enemy):
 
     def damageEffect(self, target):
         if target == target.getRoom().getActivePlayer():
-            print("RAGE CREEP attacks to the left!\n")
             activeNum = target.getRoom().getActivePlayer().getNumber()
             numPlayers = len(target.getRoom().getPlayers())
             leftPlayer = target.getRoom().getPlayers()[activeNum % numPlayers]
+            message = f"{self.name} attacks to the left. Player {leftPlayer.getNumber()} is caught in the crossfire!"
+            Json.systemOutput(message)
             self.dealDamage(self.attack, leftPlayer)
         return
 
 # when this dies, the active player must make an additional attack (PORTAL)
-class monsterDieExtraAttack(Enemy):
+class monsterDieExtraMandatoryAttack(Enemy):
     def __init__(self, name, picture, maxHp, attack, diceValue, soulCount, reward):
         super().__init__(name, picture, maxHp, attack, diceValue, soulCount, reward)
         self.hp = maxHp
@@ -425,7 +431,8 @@ class monsterDieExtraAttack(Enemy):
         # get active player
         activePlayer = room.getActivePlayer()
         activePlayer.getCharacter().addMandatoryAttacks()
-        print(f"The active player must attack again this turn!\n")
+        message = f"Player {activePlayer.getNumber()} must attack again this turn ({self.name})!"
+        Json.systemOutput(message)
         return
 
 # each time the attacking player rolls and attack roll of 3, they must steal a loot card from another player at random (RING OF FLIES)
@@ -454,21 +461,23 @@ class monsterRollRingOfFlies(Enemy):
                 continue
             viableHands.append(players[i].getNumber())
         if len(viableHands) == 0:
-            print("No loot cards to steal D:\n")
+            message = f"No loot cards to steal ({self.name})."
+            Json.systemOutput(message)
             return
         chosenNum = random.choice(viableHands) # the player number who will be stolen from
         chosenHandLen = players[chosenNum -1].getHand().getDeckLength()
         chosenIndex = random.randint(1, chosenHandLen) - 1 # the index of the card to be stolen
         stolenLoot = players[chosenNum - 1].getHand().removeCardIndex(chosenIndex)
         activePlayer.getHand().addCardBottom(stolenLoot)
-        print(f"Player {activePlayer.getNumber()} stole a loot card from player {chosenNum}!")
+        message = f"Player {activePlayer.getNumber()} stole a loot card from Player {chosenNum} ({self.name})!"
+        Json.systemOutput(message)
         return
 
     def takeDamage(self, num, attacker):
         # make attacking player steal a loot if they rolled a 3
-        if len(attacker.getRoom().getStack().getStack()) > 1:
-            if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
-                if attacker.getRoom().getStack().getStack()[1][0].getResult() == 3:
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
+                if attacker.getRoom().getStack().getLastResolved()[0].getResult() == 3:
                     self.stealLoot(attacker)
         # take damage after stealing loot
         Entity.takeDamage(self, num, attacker)
@@ -476,9 +485,9 @@ class monsterRollRingOfFlies(Enemy):
 
     def dealDamage(self, num, target):
         # make attacking player steal a loot if they rolled a 3
-        if len(attacker.getRoom().getStack().getStack()) > 1:
-            if isinstance(target.getRoom().getStack().getStack()[1][0], Dice):
-                if target.getRoom().getStack().getStack()[1][0].getResult() == 3:
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(target.getRoom().getStack().getLastResolved()[0], Dice):
+                if target.getRoom().getStack().getLastResolved()[0].getResult() == 3:
                     self.stealLoot(target)
         # deal damage after stealing loot
         Entity.dealDamage(self, num, target)
@@ -492,10 +501,11 @@ class monsterRollSwarmOfFlies(Enemy):
 
     def takeDamage(self, num, attacker):
         # make attacking player steal a loot if they rolled a 3
-        if len(attacker.getRoom().getStack().getStack()) > 1:
-            if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
-                if attacker.getRoom().getStack().getStack()[1][0].getResult() == 5:
-                    print("SWARM OF FLIES deals 1 damage!\n")
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
+                if attacker.getRoom().getStack().getLastResolved()[0].getResult() == 5:
+                    message = f"{self.name} deals 1 damage (attack roll of 5)!"
+                    Json.systemOutput(message)
                     attacker.takeDamage(1, self)
         # take damage after stealing loot
         Entity.takeDamage(self, num, attacker)
@@ -503,10 +513,11 @@ class monsterRollSwarmOfFlies(Enemy):
 
     def dealDamage(self, num, target):
         # make attacking player steal a loot if they rolled a 3
-        if len(attacker.getRoom().getStack().getStack()) > 1:
-            if isinstance(target.getRoom().getStack().getStack()[1][0], Dice):
-                if target.getRoom().getStack().getStack()[1][0].getResult() == 5:
-                    print("SWARM OF FLIES deals 1 damage!\n")
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(target.getRoom().getStack().getLastResolved()[0], Dice):
+                if target.getRoom().getStack().getLastResolved()[0].getResult() == 5:
+                    message = f"{self.name} deals 1 damage (attack roll of 5)!"
+                    Json.systemOutput(message)
                     attacker.takeDamage(1, self)
         # deal damage after stealing loot
         Entity.dealDamage(self, num, target)
@@ -522,21 +533,19 @@ class monsterDieDestroySoul(Enemy):
     def dieEffect(self, attacker):
         # get room
         room = attacker.getRoom()
-        # get board
-        board = attacker.getRoom().getBoard()
         # get active player
         activePlayer = room.getActivePlayer()
         # choose a player
         room.displayCharacters()
-        num = int(input("Force which player to destroy a soul?: "))
-        num -= 1
-        # destroy soul
-        chosenPlayer = room.getPlayers()[num]
+        message = "Force which player to destroy a soul?"
+        chosenPlayer = activePlayer.chooseAnyPlayer(message)
         if chosenPlayer.getSouls() >= 1:
             chosenPlayer.subtractSouls(1)
-            print(f"Player {chosenPlayer.getNumber()} was forced to lose a soul!\n")
+            message = f"Player {chosenPlayer.getNumber()} was forced to lose a soul by Player {activePlayer.getNumber()} ({self.name})!"
+            Json.systemOutput(message)
         else:
-            print(f"Player {chosenPlayer.getNumber()} had no souls to discard!\n")
+            message = f"Player {chosenPlayer.getNumber()} had no souls to discard ({self.name})!"
+            Json.systemOutput(message)
         return
 
 # this takes no damage on attack rolls of 4 or 5 (CARRION QUEEN)
@@ -547,19 +556,19 @@ class monsterRollCarrionQueen(Enemy):
 
     def takeDamage(self, num, attacker):
         # if the stack element above this monster is a dice and it is a 4 or 5
-        if len(attacker.getRoom().getStack().getStack()) > 1:
-            if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
-                result = attacker.getRoom().getStack().getStack()[1][0].getResult()
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
+                result = attacker.getRoom().getStack().getLastResolved()[0].getResult()
                 if (result == 4) or (result == 5):
                     # return without dealing damage
-                    print("\nDamage roll immunity!")
+                    message = f"{self.name} is immune to damage rolls of 4 and 5! DD:"
+                    Json.systemOutput(message)
                     return
         # take damage as normal
         Entity.takeDamage(self, num, attacker)
         return
 
 # when this dies, the active player chooses a player. that player gives you a soul (THE LAMB)
-# TODO: will need to be edited when souls are reworked
 class monsterDieStealSoul(Enemy):
     def __init__(self, name, picture, maxHp, attack, diceValue, soulCount, reward):
         super().__init__(name, picture, maxHp, attack, diceValue, soulCount, reward)
@@ -574,16 +583,16 @@ class monsterDieStealSoul(Enemy):
         activePlayer = room.getActivePlayer()
         # choose a player
         room.displayCharacters()
-        num = int(input("Force which player to give you a soul?: "))
-        num -= 1
-        # steal soul
-        chosenPlayer = room.getPlayers()[num]
+        message = "Force which player to give you a soul?"
+        chosenPlayer = activePlayer.getChosenPlayer(message, activePlayer)
         if chosenPlayer.getSouls() >= 1:
             chosenPlayer.subtractSouls(1)
             activePlayer.addSouls(1)
-            print(f"Player {chosenPlayer.getNumber()} was forced to lose a soul!\n")
+            message = f"Player {chosenPlayer.getNumber()} was forced to give a soul to Player {activePlayer.getNumber()} ({self.name})!"
+            Json.systemOutput(message)
         else:
-            print(f"Player {chosenPlayer.getNumber()} had no souls to steal!\n")
+            message = f"Player {chosenPlayer.getNumber()} had no souls for Player {activePlayer.getNumber()} to steal ({self.name})!"
+            Json.systemOutput(message)
         return
 
 # when this dies, the active player chooses a player. that player dies (DEATH)
@@ -595,22 +604,17 @@ class monsterDieKillPlayer(Enemy):
     def dieEffect(self, attacker):
         # get room
         room = attacker.getRoom()
-        # get board
-        board = attacker.getRoom().getBoard()
         # get active player
         activePlayer = room.getActivePlayer()
         # choose a player
         room.displayCharacters()
         # kill
-        kill = False
-        while kill == False:
-            num = int(input("Kill which player?: "))
-            num -= 1
-            chosenPlayer = room.getPlayers()[num]
-            if chosenPlayer.getHp() > 0: # TODO: doesnt account for a case where all players are dead
-                chosenPlayer.getCharacter().die(activePlayer)
-                print(f"Player {activePlayer.getNumber()} kills Player {chosenPlayer.getNumber()}!\n")
-                kill = True
+        message = f"Kill which player ({self.name})?"
+        chosenPlayer = attacker.chooseAnyPlayer(message)
+        if chosenPlayer.getHp() > 0:
+            chosenPlayer.die(activePlayer)
+            message = f"Player {activePlayer.getNumber()} kills Player {chosenPlayer.getNumber()} ({self.name})!"
+            Json.systemOutput(message)
         return
 
 # when this is at 1 hp it has +1 attack (Gemini)
@@ -623,7 +627,8 @@ class monsterHpGemini(Enemy):
         targetHp = target.getHp()
         if self.hp == 1:
             num += 1
-            print("1 bonus damage is dealt!\n")
+            message = f"{self.name} dealt 1 bonus damage!"
+            Json.systemOutput(message)
         target.takeDamage(num, self)
         # make sure that damage was not prevented before carrying out damage procs
         if target.getHp() < targetHp:
@@ -639,16 +644,17 @@ class monsterRollGluttony(Enemy):
     def takeDamage(self, num, attacker):
         Entity.takeDamage(self, num, attacker)
         # check for a roll of 6
-        if len(attacker.getRoom().getStack().getStack()) > 1:
-            if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
-                if attacker.getRoom().getStack().getStack()[1][0].getResult() == 6:
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
+                if attacker.getRoom().getStack().getLastResolved()[0].getResult() == 6:
                     # deal damage to left player
                     # find the active player
                     activePlayerIndex = attacker.getRoom().getActivePlayerIndex()
                     players = attacker.getRoom().getPlayers()
                     # deal damage to left/right player
                     leftPlayer = players[(activePlayerIndex - 1) % 4]
-                    print(f"Player {leftPlayer.getNumber()} is hurt by GLUTONNY's splash damage!\n")
+                    message = f"Player {leftPlayer.getNumber()} is hurt by {self.name}'s splash damage!"
+                    Json.systemOutput(message)
                     leftPlayer.takeDamage(1, self)
         return
 
@@ -658,7 +664,8 @@ class monsterDamageGreed(Enemy):
         self.hp = maxHp
 
     def damageEffect(self, target):
-        print("GREED makes everyone drop 4 pennies!\n")
+        message = f"{self.name} makes everyone drop 4 pennies!"
+        Json.systemOutput(message)
         for i in range(len(target.getRoom().getPlayers())):
             target.getRoom().getPlayers()[i].subtractCoins(4)
         return
@@ -671,7 +678,8 @@ class monsterHurtDamageUp(Enemy):
 
     def takeDamage(self, num, attacker):
         Entity.takeDamage(self, num, attacker)
-        print(f"{self.name}'s rage grows...\n")
+        message = f"{self.name}'s rage grows... (+1 ATK)"
+        Json.systemOutput(message)
         self.attack += 1
         return
 
@@ -685,12 +693,13 @@ class monsterHpLarryJr(Enemy):
         # check that larry jr is in the appropriate hp range
         if self.hp <= 2:
             # the only things on the stack are declared attack and dice roll
-            if len(attacker.getRoom().getStack().getStack()) == 2:
-                if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
+            if len(attacker.getRoom().getStack().getStack()) == 1:
+                if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
                     # if they rolled exactly enough to hurt larry jr without the dice buff
-                    if attacker.getRoom().getStack().getStack()[1][0].getResult() <= self.diceValue:
+                    if attacker.getRoom().getStack().getLastResolved[0].getResult() <= self.diceValue:
                         if self.diceValue != 6: # if larry jr somehow gets 6 dice it still needs to be possible to hurt it
-                            print("LARRY JR. evades the attack!\n")
+                            message = f"{self.name} evades the attack!"
+                            Json.systemOutput(message)
                             self.dealDamage(self.attack, attacker)
                             return
         Entity.takeDamage(self, num, attacker)
@@ -706,11 +715,12 @@ class monsterHurtLust(Enemy):
         hp = self.hp
         Entity.takeDamage(self, num, attacker)
         # make sure damage was a combat roll
-        if len(attacker.getRoom().getStack().getStack()) == 2:
-            if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
                 if self.hp < hp: # if damage was actually dealt
                     # deal 1 thorns damage
-                    print("LUST grabs you while youre close...!\n")
+                    message = f"{self.name} tries to take Player {attacker.getNumber()} down with itself...!"
+                    Json.systemOutput(message)
                     self.dealDamage(1, attacker)
         return
 
@@ -724,12 +734,13 @@ class monsterHpMaskOfInfamy(Enemy):
         # check that mask is in the appropriate hp range
         if self.hp == 1:
             # the only things on the stack are declared attack and dice roll
-            if len(attacker.getRoom().getStack().getStack()) == 2:
-                if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
+            if len(attacker.getRoom().getStack().getStack()) == 1:
+                if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
                     # if they rolled exactly to hurt mask without the dice buff
-                    if attacker.getRoom().getStack().getStack()[1][0].getResult() <= (self.diceValue + 1):
+                    if attacker.getRoom().getStack().getLastResolved()[0].getResult() <= (self.diceValue + 1):
                         if self.diceValue != 6: # if mask somehow gets 6 dice it still needs to be possible to hurt it
-                            print("MASK OF INFAMY evades the attack!\n")
+                            message = f"{self.name} evades the attack!"
+                            Json.systemOutput(message)
                             self.dealDamage(self.attack, attacker)
                             return
         Entity.takeDamage(self, num, attacker)
@@ -743,7 +754,8 @@ class monsterDamageMegaFatty(Enemy):
 
     def damageEffect(self, target):
         if self.hp < self.maxHp:
-            print("MEGA FATTY takes time to eat its leftovers.\n")
+            message = f"{self.name} takes time to eat its leftovers."
+            Json.systemOutput(message)
             self.hp += 1
         return
 
@@ -755,11 +767,10 @@ class monsterDamageScolex(Enemy):
 
     def damageEffect(self, target):
         if target.getHand().getDeckLength() > 0:
-            print("SCOLEX knocks a loot card out of your hand.\n")
+            message = f"{self.name} knocks a loot card out of your hand."
+            Json.systemOutput(message)
             target.getHand().printCardListNames()
-            cardChoice = int(input("Choose a card to discard: "))
-            discard = target.getHand().removeCardIndex(cardChoice-1)
-            target.getRoom().getBoard().getDiscardLootDeck().addCardTop(discard)
+            target.chooseDiscard(1, target)
         return
 
 # when this dies, the player that killed it discards their hand (SLOTH)
@@ -777,7 +788,8 @@ class monsterDieSloth(Enemy):
         for i in range(attacker.getHand().getDeckLength()):
             discard = attacker.getHand().removeCardIndex(0)
             attacker.getRoom().getBoard().getDiscardLootDeck().addCardTop(discard)
-        print("All of your loot cards turn to dust!?\n")
+        message = f"All of your loot cards turn to dust!?"
+        Json.systemOutput(message)
         return
 
 # each time this deals combat damage it deals 1 damage to all other players (THE BLOAT)
@@ -796,7 +808,8 @@ class monsterDamageTheBloat(Enemy):
             if players[i] is not activePlayer:
                 # deal 1 damage to each non active player
                 self.dealDamage(1, players[i])
-        print("Everyone is caught in THE BLOAT's crossfire!!\n")
+        message = f"Everyone is caught in {self.name}'s crossfire!!"
+        Json.systemOutput(message)
         return
 
 # each time this would take damage the active player rolls. on 1 prevent that damage (THE DUKE OF FLIES)
@@ -807,11 +820,13 @@ class monsterHurtTheDukeOfFlies(Enemy):
 
     def takeDamage(self, num, attacker):
         # roll a dice
-        print("Roll for DUKE OF FLIES.\n")
+        message = f"Roll for {self.name}..."
+        Json.systemOutput(message)
         count = rollDice(attacker)
         # take no damage on a roll of 1
         if count == 1:
-            print("A stray fly blocks your attack...\n")
+            message = f"A stray fly blocks Player {attacker.getNumber()}'s attack..."
+            Json.systemOutput(message)
             return
         Entity.takeDamage(self, num, attacker)
         return
@@ -826,19 +841,16 @@ class monsterDiePestilence(Enemy):
         # get room
         room = attacker.getRoom()
         playerList = room.getPlayers()
-        # get board
-        board = attacker.getRoom().getBoard()
         # get active player
         activePlayer = room.getActivePlayer()
         # deal 1 damage twice
         for i in range(2):
-            room.displayEntities()
-            num = int(input("Deal 1 damage to which creature?: "))
-            # bomb the selected target
-            if int(num) <= len(playerList):  # bomb player
-                room.getPlayers()[int(num) - 1].takeDamage(1, activePlayer)
-            else:  # bomb monster
-                attacker.getBoard().getMonsters()[int(num) - 1 - len(playerList)][-1].takeDamage(1, activePlayer)
+            message = f"Deal 1 damage to which creature?"
+            chosenEntity = attacker.chooseAnyEntity(message)
+            message = f"Player {activePlayer.getNumber()} did 1 damage to " \
+                      f"{chosenEntity.getName()} ({self.name})!"
+            Json.systemOutput(message)
+            chosenEntity.takeDamage(1, activePlayer)
         return
 
 # when this dies, the active player rolls. 1-3 all players take 1 damage. 4-6 all players take 2 damage (WRATH)
@@ -852,13 +864,17 @@ class monsterDieWrath(Enemy):
         room = attacker.getRoom()
         playerList = room.getPlayers()
         # roll a dice
+        message = f"Rolling for {self.name}...!"
+        Json.systemOutput(message)
         count = rollDice(attacker)
         if count < 4:
-            print("Everyone is caught in an explosion!\n")
+            message = f"Everyone is caught in {self.name}'s explosion!"
+            Json.systemOutput(message)
             for i in range(len(playerList)):
                 self.dealDamage(1, playerList[i])
         else:
-            print("Everyone is caught in an inferno!!\n")
+            message = f"Everyone is caught in {self.name}'s inferno!!"
+            Json.systemOutput(message)
             for i in range(len(playerList)):
                 self.dealDamage(2, playerList[i])
         return
@@ -872,13 +888,14 @@ class monsterRollDieMom(Enemy):
     def dealDamage(self, num, target):
         atk = self.attack
         # if index 1 on the stack is a dice roll and a 1
-        if len(target.getRoom().getStack().getStack()) > 1:
-            if isinstance(target.getRoom().getStack().getStack()[1][0], Dice):
-                result = target.getRoom().getStack().getStack()[1][0].getResult()
+        if len(target.getRoom().getStack().getStack()) == 1:
+            if isinstance(target.getRoom().getStack().getLastResolved()[0], Dice):
+                result = target.getRoom().getStack().getLastResolved()[0].getResult()
                 if result == 1:
                     # double attack
                     self.setAttack(atk + atk)
-                    print("MOM! deals bonus damage this roll!\n")
+                    message = f"{self.name} deals {atk} + {atk} damage this roll!"
+                    Json.systemOutput(message)
         Entity.dealDamage(self, self.attack, target)
         # return attack to normal
         self.setAttack(atk)
@@ -887,8 +904,9 @@ class monsterRollDieMom(Enemy):
     def dieEffect(self, attacker):
         # get board
         board = attacker.getRoom().getBoard()
-        board.addMonsterSlot(attacker)
-        print("More monsters appeared!\n")
+        board.addMonsterSlot()
+        message = f"More monsters appeared ({self.name})!"
+        Json.systemOutput(message)
         return
 
 # each time the attacking player rolls an attack roll of 6 they choose a living player, that player dies (SATAN)
@@ -901,23 +919,33 @@ class monsterRollSatan(Enemy):
         room = attacker.getRoom()
         activePlayer = room.getActivePlayer()
         # the only things on the stack are declared attack and dice roll
-        if len(attacker.getRoom().getStack().getStack()) == 2:
-            if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
-                # if they rolled exactly to hurt mask without the dice buff
-                if attacker.getRoom().getStack().getStack()[1][0].getResult() == 6:
-                    print("You make a deal with the devil...\n")
+        #if len(attacker.getRoom().getStack().getStack()) == 2:
+        if len(attacker.getRoom().getStack().getStack()) == 1:
+            if isinstance(attacker.getRoom().getStack().getLastResolved()[0], Dice):
+            #if isinstance(attacker.getRoom().getStack().getStack()[1][0], Dice):
+                # if they rolled exactly 6
+                #if attacker.getRoom().getStack().getStack()[1][0].getResult() == 6:
+                if attacker.getRoom().getStack().getLastResolved()[0].getResult() == 6:
+                    message = f"Player {activePlayer.getNumber()} makes a deal with the devil..."
+                    Json.systemOutput(message)
                     # choose a player
                     room.displayCharacters()
                     # kill
                     kill = False
+                    tries = 0
                     while kill == False:
-                        num = int(input("Kill which player?: "))
-                        num -= 1
-                        chosenPlayer = room.getPlayers()[num]
-                        if chosenPlayer.getHp() > 0:  # TODO: doesnt account for a case where all players are dead
-                            chosenPlayer.getCharacter().die(activePlayer)
-                            print(f"Player {activePlayer.getNumber()} kills Player {chosenPlayer.getNumber()}!\n")
+                        message = f"Kill which living player ({self.name})?"
+                        chosenPlayer = attacker.chooseAnyPlayer(message)
+                        # kill the chosen player (if they are alive)
+                        if chosenPlayer.getHp() > 0:
+                            chosenPlayer.die(activePlayer)
+                            message = f"Player {activePlayer.getNumber()} kills Player {chosenPlayer.getNumber()} ({self.name})!"
+                            Json.systemOutput(message)
                             kill = True
+                        tries += 1
+                        # this should prevent a softlock when all players are dead
+                        if tries == len(room.getPlayers()):
+                            return
         Entity.takeDamage(self, num, attacker)
         return
 
@@ -956,7 +984,7 @@ def createAdditionalEnemeies():
     additionalEnemyDeck.addCardTop(mulliboom)
     mulligan = monsterDieMulligan("Mulligan", "test image.jpg", 1, 1, 3, 0, [CoinStack(3)])
     additionalEnemyDeck.addCardTop(mulligan)
-    portal = monsterDieExtraAttack("Portal", "test image.jpg", 2, 1, 4, 0, [CoinStack(3)])
+    portal = monsterDieExtraMandatoryAttack("Portal", "test image.jpg", 2, 1, 4, 0, [CoinStack(3)])
     additionalEnemyDeck.addCardTop(portal)
     conquest = monsterDieExtraAttack("Conquest", "test image.jpg", 2, 1, 3, 1, [CoinStack(6)])
     additionalEnemyDeck.addCardTop(conquest)

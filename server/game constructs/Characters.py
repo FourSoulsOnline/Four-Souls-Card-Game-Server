@@ -6,6 +6,9 @@
 from Cards import *
 from Decks import Deck
 from Effects import *
+from JsonOutputHelper import JsonOutputHelper
+
+Json = JsonOutputHelper()
 
 def createCharacterCards():
     # characters from the base game
@@ -64,7 +67,7 @@ class D6(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
         self.eternal = True
-        self.name = "D6"
+        self.name = name
         self.picture = "test image.jpg"
 
     def use(self, user):
@@ -74,30 +77,29 @@ class D6(GoldTreasure):
         dice = stack.findDice()
         if isinstance(dice, Dice) == True:
             dice.roll()
+            message = f"the dice has been re-rolled to {dice.getResult()}"
+            Json.systemOutput(message)
             self.tapped = True
         else:
-            print("No dice found")
+            message = "No dice found"
+            Json.systemOutput(message)
         return
 
 class YumHeart(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
         self.eternal = True
-        self.name = "YUM HEART"
+        self.name = name
         self.picture = "test image.jpg"
 
     def use(self, user):
         # choose an entity to protect from an instance of damage
-        room = user.getRoom()
-        room.displayEntities()
-        index = int(input("Who do you want to choose for Yum Heart?"))
+        message = "Choose a player to give effects of Yum Heart to"
+        chosenEntity = user.chooseAnyEntity(message)
         reduceDamage = ReduceDamage(9999)
-        if isinstance(room.getEntity(index), Enemy):
-            enemy = room.getEntity(index)
-            enemy.addInventory(reduceDamage)
-        else:
-            character = room.getEntity(index)
-            character.addInventory(reduceDamage)
+        chosenEntity.addInventory(reduceDamage)
+        message = f"{self.name} is protecting {chosenEntity.getName()}"
+        Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -105,25 +107,31 @@ class SleightOfHand(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
         self.eternal = True
-        self.name = "SLEIGHT OF HAND"
+        self.name = name
         self.picture = "test image.jpg"
 
     def use(self, user):
         # look at top 5 cards and put them back in any order
-        deck = Deck([])
         dummyDeck = Deck([])
         room = user.getRoom()
+        playerOption = []
         deck = user.drawLoot(5)
+        for i in deck.getCardList():
+            playerOption.append(i.getName())
         # put card in order that player wants them to be
         while deck.getDeckLength() > 0:
-            deck.printCardListNames()
-            index = int(input(f'Which card do you want to return to loot deck: '))
-            dummyDeck.addCardBottom(deck.getCard(index - 1))
-            deck.removeCardIndex(index - 1)
+            message = "Choose a card to return it to loot deck"
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            index = int(input()) - 1
+            dummyDeck.addCardBottom(deck.getCard(index))
+            deck.removeCardIndex(index)
+            playerOption.pop(index)
         # add the cards back to the top of loot deck
         while dummyDeck.getDeckLength() > 0:
             room.getBoard().getLootDeck().addCardTop(dummyDeck.getCard(0))
             dummyDeck.removeCardIndex(0)
+        message = f"The deck has been shifted because of {self.name()}"
+        Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -132,7 +140,7 @@ class BookOfBelial(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
         self.eternal = True
-        self.name = "BOOK OF BELIAL"
+        self.name = name
         self.picture = "test image.jpg"
 
     def use(self, user):
@@ -141,65 +149,81 @@ class BookOfBelial(GoldTreasure):
         stack = room.getStack()
         dice = stack.findDice()
         if isinstance(dice, Dice) == True:
-            choice = int(input("1.Add to Dice roll\n2.Subtract to Dice roll\n"))
+            message = "Choose to add or subtract 1 to the dice roll"
+            Json.choiceOutput(user.getSocketId(), message, ["Add", "Subtract"])
+            choice = int(input())
             if choice == 1:
                 dice.incrementUp()
+                message = "The dice value increased by 1"
+                Json.systemOutput(message)
             elif choice == 2:
+                message = "The dice value decreased by 1"
+                Json.systemOutput(message)
                 dice.incrementDown()
             self.tapped = True
         else:
-            print("No dice found")
+            message = "No dice found"
+            Json.systemOutput(message)
         return
 
 class ForeverAlone(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
         self.eternal = True
-        self.name = "FOREVER ALONE"
+        self.name = name
         self.picture = "test image.jpg"
 
     def use(self, user):
-        choice = int(input("What do you want to do\nOption 1:Steal coin for a player\nOption 2:Loot at top card "
-                           "of a deck\nOption 3:Discard a loot card then loot 1\nChoice: "))
+        message = "Choose to steal a coin from a player, look at the top card of a deck, discard a loot card then loot 1"
+        Json.choiceOutput(user.getSocketId(), message, ["Steal a coin", "Look at a deck", "Discard and Loot"])
+        choice = int(input())
         room = user.getRoom()
         # option 1 steal a coin from a player
         if choice == 1:
-            print("Which player do you want to steel a coin from")
-            for i in range(len(room.getPlayers())):
-                if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                    pass
-                else:
-                    print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-            playerChoice = int(input("Choice: "))
+            message = "Choose a player to steel a coin"
+            Json.systemOutput(message)
+            playerChoice = user.getChosenPlayer(message, user)
             # steel coin from the player they choose
-            if room.getPlayers()[playerChoice - 1].getCoins() == 0:
-                print("This player has no coins")
+            if playerChoice.getCoins() == 0:
+                message = "This player has no coins"
+                Json.systemOutput(message)
                 return
             else:
-                room.getPlayers()[playerChoice - 1].subtractCoins(1)
+                message = f"Player {user.getNumber()} stole 1 coin from Player {playerChoice.getNumber()}"
+                Json.systemOutput(message)
+                playerChoice.subtractCoins(1)
                 user.addCoins(1)
         # option 2 look at top card of a deck
         elif choice == 2:
-            playerChoice = int(input("Which deck do you want to look at\n1.Loot deck\n2.Monster Deck\n3.Treasure Deck"
-                               "\nChoice: "))
+            message = "Choose a deck to look at, Loot, Monster, or Treasure"
+            Json.choiceOutput(user.getSocketId(), message, ["Loot", "Monster", "Treasure"])
+            deckChoice = int(input())
             # look at top card from deck they choose
-            if playerChoice == 1:
+            if deckChoice == 1:
                 card = room.getBoard().getLootDeck().getCard(0)
-            if playerChoice == 2:
+            if deckChoice == 2:
                 card = room.getBoard().getMonsterDeck().getCard(0)
-            if playerChoice == 3:
+            if deckChoice == 3:
                 card = room.getBoard().getTreasureDeck().getCard(0)
-            print(f'This is the top card from that deck: {card.getName()}')
+            message = f"This is the top card from that deck: {card.getName()}"
+            Json.systemOutput(message)
         # option 3 discard a loot card then loot 1
         elif choice == 3:
             # if user hand is empty, then doesn't need to discard anything
             if user.getHand().getDeckLength() == 0:
+                message = "Your hand is empty so you don't discard"
+                Json.systemOutput(message)
                 pass
             else:
-                print("Which loot card do you want to discard")
-                user.getHand().printCardListNames()
-                playerChoice = int(input("Choice: "))
-                user.getHand().removeCardIndex(playerChoice - 1)
+                message = "Choose a loot card to discard"
+                playerOption = []
+                for i in user.getHand().getCardList():
+                    playerOption.append(i.getName())
+                Json.choiceOutput(user.getSocketId(), message, playerOption)
+                cardChoice = int(input())
+                user.getHand().removeCardIndex(cardChoice - 1)
+            message = f"Player {user.getNumber()} gained a loot from {self.name}"
+            Json.systemOutput(message)
             user.loot(1)
         self.tapped = True
         return
@@ -391,14 +415,14 @@ class EdenStartingCard(GoldTreasure):
 def createAllStartingItems():
     startingDeck = Deck([])
     startingDeck.addCardBottom(D6("D6", "test.jpg", True))
-    startingDeck.addCardBottom(YumHeart("YUM HEART", "test.jpg", True))
-    startingDeck.addCardBottom(SleightOfHand("SLEIGHT OF HAND", "test.jpg", True))
-    startingDeck.addCardBottom(BookOfBelial("BOOK OF BELIAL", "test.jpg", True))
-    startingDeck.addCardBottom(ForeverAlone("FOREVER ALONE", "test.jpg", True))
-    startingDeck.addCardBottom(TheCurse("THE CURSE", "test.jpg", True))
-    startingDeck.addCardBottom(BloodLust("BLOOD LUST", "test.jpg", True))
-    startingDeck.addCardBottom(LazarusRags("LAZARUS RAGS", "test.jpg", True))
-    startingDeck.addCardBottom(Incubus("INCUBUS", "test.jpg", True))
-    startingDeck.addCardBottom(TheBone("THE BONE", "test.jpg", True))
-    startingDeck.addCardBottom(EdenStartingCard("EDEN STARTING ITEM", "test.jpg", True))
+    startingDeck.addCardBottom(YumHeart("Yum Heart", "test.jpg", True))
+    startingDeck.addCardBottom(SleightOfHand("Sleight Of Hand", "test.jpg", True))
+    startingDeck.addCardBottom(BookOfBelial("Book Of Belial", "test.jpg", True))
+    startingDeck.addCardBottom(ForeverAlone("Forever Alone", "test.jpg", True))
+    startingDeck.addCardBottom(TheCurse("The Curse", "test.jpg", True))
+    startingDeck.addCardBottom(BloodLust("Blood Lust", "test.jpg", True))
+    startingDeck.addCardBottom(LazarusRags("Lazarus Rags", "test.jpg", True))
+    startingDeck.addCardBottom(Incubus("Incubus", "test.jpg", True))
+    startingDeck.addCardBottom(TheBone("The Bone", "test.jpg", True))
+    startingDeck.addCardBottom(EdenStartingCard("Eden Starting Item", "test.jpg", True))
     return startingDeck

@@ -6,12 +6,17 @@
 '''
 Everything is within a Room (Stack, Board, Players)
 '''
+import time
+import json
+import sys
 from Coins import CoinStack
 from LootCards import *
 from Board import *
 from SilverTreasureCards import TakeDamageTreasure
 from SilverTreasureCards import DiceEffectTreasure
+from JsonOutputHelper import JsonOutputHelper
 
+Json = JsonOutputHelper()
 
 class Room:
     def __init__(self, stack, board):
@@ -79,17 +84,21 @@ class Room:
     # TODO: it would probably be nice for this to not be case sensitive
     def checkResponse(self, playerIndex):
         anyYes = False
-        inp1 = input(
-            f"Player {self.players[playerIndex].getNumber()}, do you want to respond to {self.getStack().getStack()[-1][0].getName()} ('Y'/'N')? ")
-        if inp1 == "Y":
-            inp2 = input("Do you want to play from your hand or play an active treasure ('HAND'/'TREASURE'/CANCEL)? ")
-            if inp2 == "HAND":
+        message = f"Player {self.players[playerIndex].getNumber()}, do you want to respond to {self.getStack().getStack()[-1][0].getName()}"
+        Json.choiceOutput(self.players[playerIndex].getSocketId(), message, ["Yes", "No"])
+        inp1 = int(input())
+        if inp1 == 1:
+            message = "Do you want to play a loot card from your hand or play an active treasure"
+            Json.choiceOutput(self.players[playerIndex].getSocketId(), message, ["Loot Card", "Treasure Card", "Cancel"])
+            inp2 = int(input())
+            if inp2 == 1:
                 if self.players[playerIndex].getTapped() < 1:
-                    print("You can't play any more loot cards this turn.")
+                    message = "You can't play any more loot cards this turn."
+                    Json.systemPrivateOutput(self.players[playerIndex].getSocketId(), message)
                 else:
                     anyYes = True
                     lootPlay(self.players[playerIndex])
-            elif inp2 == "TREASURE":
+            elif inp2 == 2:
                 anyYes = True
                 itemPlay(self.players[playerIndex])
             else:  # CANCEL
@@ -107,10 +116,15 @@ class Room:
                 response = self.checkResponse(nextPlayerIndex)
         return
 
-    # use all elements of the stack (only for testing)
     def useTopStack(self, playerIndex):
-        self.stack.useTop()
+        self.stack.useTop(self)
+        # Print specific player information, as well as board info for frontend rendering.
         playerList = self.players
+
+        # for player in playerList:
+        #     print(player.getPlayerHandObject())
+        # print("USE TOP STACK" + self.stack.getLastResolved()[0].getName())
+
         response = False  # this var prevents anyone from responding to something that has already been responded to when set to true
         if len(self.stack.getStack()) == 0:
             return
@@ -128,19 +142,14 @@ class Room:
                 response = self.checkResponse(nextPlayerIndex)
         return
 
+    # this function is used to use the TakeDamageTreasures use function, we need this because of damageNum is needed in
+    # use function for TakeDamageTreasures
     def useDamageEffect(self, playerIndex, damageNum):
-        #lastResolved = self.stack.getLastResolved()
-        #'''
-
+        # this takes the TakeDamageTreasure off the stack
         self.stack.setLastResolved(self.stack.getStack().pop(-1))
-
+        # this uses the TakeDamageTreasure card
         self.stack.getLastResolved()[0].use(self.stack.getLastResolved()[1], damageNum)
-        #'''
-        #try:
-        #    lastResolved = self.stack.pop()
-        #except:
-        #    pass
-        #lastResolved[0].use(lastResolved[1])
+        # PLAYER-BOARD JSON
         playerList = self.players
         response = False  # this var prevents anyone from responding to something that has already been responded to when set to true
         if len(self.stack.getStack()) == 0:
@@ -192,3 +201,10 @@ class Room:
             entities.append(self.board.getMonster(i + 1))  # did +1 because getMonster already -1,
             # but we need to start at 0 not -1
         return entities
+    
+    def printBoardSection(self):
+        for player in self.players:
+            print(json.dumps(player.getPlayerBoardSectionObject()))
+            #time.sleep(1)
+            sys.stdout.flush()
+

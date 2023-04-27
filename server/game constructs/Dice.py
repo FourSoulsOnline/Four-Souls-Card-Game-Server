@@ -5,6 +5,7 @@ Dice go in TheStack
 '''
 import random
 from SilverTreasureCards import DiceEffectTreasure
+from JsonOutputHelper import JsonOutputHelper
 
 # the code of rollDice is written in other functions, maybe we should replace them with this function call
 def rollDice(user):
@@ -15,10 +16,10 @@ def rollDice(user):
         return  # prevents error when character kills monster during attack, the stack becomes empty causing index error
     # use any cards played in response to the added dice before the dice resolves
     while user.getRoom().getStack().getStack()[-1][0] != dice:
-        user.getRoom().getStack().useTop()
+        user.getRoom().getStack().useTop(user.getRoom())
     dice = user.getStack().findDice()  # update dice in case it was tampered with by a responding card
     # take the dice off the stack
-    user.getStack().useTop()
+    user.getStack().useTop(user.getRoom())
     count = dice.getResult()
     # check for on x dice roll
     globalEffects = user.getBoard().getGlobalEffects()
@@ -59,6 +60,9 @@ class Dice:
     def roll(self):
         self.result = random.randint(1, 6)
         # print("Dice result " + str(self.result))
+        # print("JSON DICE COUNT IS: " + str(self.result))
+        Json = JsonOutputHelper()
+        Json.diceOutput(self.result)
         return self
 
     # set the result of a die to a number between 0 and 6
