@@ -29,12 +29,3 @@ class CoinXReward:
         }
         return coinXRewardObject
 
-'''
-# example of creating coins and adding them
-
-myCoin = CoinStack(5)
-print(myCoin.getCount())
-myCoin2 = CoinStack(2)
-myCoin.combine(myCoin2)
-print(myCoin.getCount())
-'''

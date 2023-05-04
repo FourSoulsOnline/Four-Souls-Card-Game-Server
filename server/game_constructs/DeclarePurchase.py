@@ -1,12 +1,15 @@
 '''
 A declared purchase that will be put onto the Stack before resolving
 '''
+from JsonOutputHelper import JsonOutputHelper
+Json = JsonOutputHelper()
 
 class DeclaredPurchase:
     def __init__(self, treasure):
         self.treasure = treasure
         self.name = "Declared Purchase"
-        print("Purchase added to stack")
+        message = "Purchase added to stack"
+        Json.systemOutput(message)
 
     def getName(self):
         return self.name
@@ -22,16 +25,18 @@ class DeclaredPurchase:
         index = user.getBoard().findMatchingTreasure(self.treasure.getName())
         slotNum = index + 1
         user.purchase(slotNum)
-        print(f"Player {user.getNumber()} purchased {self.treasure.getName()}!\n")\
-        # SYSTEM JSON
-        # PLAYER-BOARD JSON for player who bought item
+        message = f"Player {user.getNumber()} purchased {self.treasure.getName()}!"
+        Json.systemOutput(message)
+        Json.playerBoardOutput(user)
+        # TREASURE JSON
         return
 
 class DeclaredPurchaseMystery:
     def __init__(self, treasure):
         self.treasure = treasure
         self.name = "Declared Purchase Mystery"
-        print("Mystery purchase added to stack")
+        message = "Mystery purchase added to stack"
+        Json.systemOutput(message)
 
     def getName(self):
         return self.name
@@ -47,7 +52,8 @@ class DeclaredPurchaseMystery:
         # give them the treasure
         slotNum = len(user.getBoard().getTreasures()) + 1
         user.purchase(slotNum)
-        print(f"Player {user.getNumber()} purchased {self.treasure.getName()} (face down)!\n")
-        # SYSTEM JSON
-        # PLAYER-BOARD JSON for player who bought item
+        message = f"Player {user.getNumber()} purchased {self.treasure.getName()} (face down)!"
+        Json.systemOutput(message)
+        Json.playerBoardOutput(user)
+        # TREASURE JSON
         return

@@ -29,9 +29,9 @@ class TheStack:
     # getters
 
     def getStackElements(self):
-        length = len(self.stack)
-        for i in range(length):
-            print(self.stack[length - (i + 1)][0].getName())
+        #length = len(self.stack)
+        #for i in range(length):
+        #    print(self.stack[length - (i + 1)][0].getName())
         return
 
     def getStack(self):
@@ -59,7 +59,7 @@ class TheStack:
         self.stack.append(obj)
         # STACK JSON - completed
         Json = JsonOutputHelper()
-        Json.stackOutput(self.getStackContentJson())
+        Json.stackOutput(self)
         return
 
     # use all elements of the stack (only for testing)
@@ -79,34 +79,38 @@ class TheStack:
             self.stack[-1][0].use(self.stack[-1][1])
 
             # Print player hand and board data for frontend rendering - D.D
+            Json = JsonOutputHelper()
             playerList = room.getPlayers()
             for player in playerList:
-                sys.stdout.flush()
-                print(json.dumps(player.getPlayerHandObject()))
-                time.sleep(1)
-            room.printBoardSection()
+                Json.playerHandOutput(player)
+                Json.playerBoardOutput(player)
             
             try:
                 self.lastResolved = self.stack.pop(-1)
+                # STACK JSON - completed
+                Json = JsonOutputHelper()
+                Json.stackOutput(self)
             except:
                 return
         # pop the card from the stack then use it, in last resolved 0 is card object, 1 is player object
         else:
             try:
                 self.lastResolved = self.stack.pop(-1)
+
             except:
                 return
             self.lastResolved[0].use(self.lastResolved[1])
-
+            
+            # STACK JSON - completed
+            Json = JsonOutputHelper()
+            Json.stackOutput(self)
             # Print player hand and board data for frontend rendering - D.D.
-         
+            Json = JsonOutputHelper()
             playerList = room.getPlayers()
             for player in playerList:
-                sys.stdout.flush()
-                print(json.dumps(player.getPlayerHandObject()))
-                time.sleep(1)
-                sys.stdout.flush()
-            room.printBoardSection()
+                Json.playerHandOutput(player)
+                Json.playerBoardOutput(player)
+            
         return
 
     '''

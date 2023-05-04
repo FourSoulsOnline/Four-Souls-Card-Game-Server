@@ -14,8 +14,8 @@ class Deck:
 
     # print the name of each card in the deck from index 0 --> -1
     def printCardListNames(self):
-        for i in range(len(self.cardList)):
-            print(f"{i+1}: {self.cardList[i].getName()}")
+        #for i in range(len(self.cardList)):
+        #    print(f"{i+1}: {self.cardList[i].getName()}")
         return
 
     def getDeckLength(self):
@@ -30,20 +30,20 @@ class Deck:
         if len(self.cardList) < index:
             raise IndexError("Index Error in getCard()")
         return self.cardList[index]
+
+    def getCardName(self, name):
+        for c in self.cardList:
+            if c.getName() == name:
+                return c
     
     def getJsonObject(self):
         if len(self.cardList) == 0:
-            deckObject = {
-                "cards": []
-            }
+            return []
         else:
             cardsJsonObjects = []
             for i in range(len(self.cardList)):
                 cardsJsonObjects.append(self.cardList[i].getJsonObject())
-            deckObject = {
-                "cards": cardsJsonObjects,
-            }
-        return deckObject
+            return cardsJsonObjects
     
     def getCardNamesAsJson(self):
         if len(self.cardList) == 0:
@@ -85,9 +85,17 @@ class Deck:
     def combineDeck(self, deck2):
         self.cardList += deck2.getCardList()
 
-    # remove a card with a name matching the input
+    # remove a card with a index matching the input
     def removeCardIndex(self, index):
         removed = self.cardList[index]
         self.cardList.remove(self.cardList[index])
+        return removed
+
+    # remove a card with a name matching the input
+    def removeCardName(self, name):
+        for c in self.cardList:
+            if c.getName() == name:
+                removed = c
+                self.cardList.remove(removed)
         return removed
 

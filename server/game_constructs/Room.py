@@ -149,8 +149,10 @@ class Room:
         self.stack.setLastResolved(self.stack.getStack().pop(-1))
         # this uses the TakeDamageTreasure card
         self.stack.getLastResolved()[0].use(self.stack.getLastResolved()[1], damageNum)
-        # PLAYER-BOARD JSON
         playerList = self.players
+        for player in playerList:
+            Json.playerHandOutput(player)
+            Json.playerBoardOutput(player)
         response = False  # this var prevents anyone from responding to something that has already been responded to when set to true
         if len(self.stack.getStack()) == 0:
             return
@@ -169,20 +171,20 @@ class Room:
         return
 
     def displayEntities(self):
-        entities = []
-        for i in range(len(self.players)):
-            entities.append(self.players[i].getCharacter())
-        for i in range(self.board.getMaxMonsterSlots()):
-            entities.append(self.board.getMonster(i + 1))
-        for i in range(len(entities)):
-            print(f"{i + 1}: {entities[i].getName()}")
+        #entities = []
+        #for i in range(len(self.players)):
+        #    entities.append(self.players[i].getCharacter())
+        #for i in range(self.board.getMaxMonsterSlots()):
+        #    entities.append(self.board.getMonster(i + 1))
+        #for i in range(len(entities)):
+        #    print(f"{i + 1}: {entities[i].getName()}")
         return
 
     def displayCharacters(self):
-        for i in range(len(self.players)):
-            character = self.players[i].getCharacter()
-            print(f"{i + 1}: {character.getName()}\n  HP: {character.getHp()}\n  Coins: {self.players[i].getCoins()}"
-                  f"\n  Items: {len(self.players[i].getItems().getCardList())}\n  Souls: {self.players[i].getSouls()}\n")
+        #for i in range(len(self.players)):
+        #    character = self.players[i].getCharacter()
+        #    print(f"{i + 1}: {character.getName()}\n  HP: {character.getHp()}\n  Coins: {self.players[i].getCoins()}"
+        #          f"\n  Items: {len(self.players[i].getItems().getCardList())}\n  Souls: {self.players[i].getSouls()}\n")
         return
 
     def getEntity(self, index):

@@ -174,7 +174,8 @@ class ChaosCard(GoldTreasure):
             if user.getItems().getCardList()[i] == self:
                 room.getBoard().discardTreasure(user, i)
                 break
-        # RETURN JSON GAME STATE
+        # update player board to show card being destroyed
+        Json.playerBoardOutput(user)
         # choose effect
         message = "Kill a creature or Destroy an item/soul "
         Json.choiceOutput(user.getSocketId(), message, ["Kill a creature", "Destroy an item/soul"])
@@ -565,7 +566,7 @@ class ModelingClay(GoldTreasure):
                     self.eternal = False
                     modelingClay = user.getItems().getCard(i - 1)
                     user.getItems().removeCardIndex(i - 1)
-            # RETURN JSON GAME STATE
+            Json.playerBoardOutput(user)
             # choose an item to copy
             message = "Choose which item to copy"
             playerOption = []
@@ -652,7 +653,7 @@ class PandorasBox(GoldTreasure):
             if user.getItems().getCard(i - 1).getName() == "Pandora's Box":
                 self.eternal = False
                 user.getItems().removeCardIndex(i - 1)
-        # RETURN JSON GAME STATE
+        Json.playerBoardOutput(user)
         diceResult = rollDice(user)
         # gain 1 cent
         if diceResult == 1:
@@ -865,7 +866,7 @@ class TheBattery(GoldTreasure):
         self.picture = "test image.jpg"
 
     def use(self, user):
-        # choose an itme from all the items on the board and recharge it by setting tapped to false
+        # choose an item from all the items on the board and recharge it by setting tapped to false
         room = user.getRoom()
         allItems = Deck([])
         itemChoice = []
@@ -992,7 +993,7 @@ class TheD4(GoldTreasure):
             if user.getItems().getCard(i - 1).getName() == "The D4":
                 self.eternal = False
                 user.getItems().removeCardIndex(i - 1)
-        # RETURN JSON GAME STATE
+        Json.playerBoardOutput(user)
         itemAmount = playerChoice.getItems().getDeckLength() - 1  # subtract because of 1 eternal
         cardsDeleted = 0
         for i in range(playerChoice.getItems().getDeckLength()):

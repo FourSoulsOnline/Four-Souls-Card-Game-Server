@@ -139,11 +139,12 @@ io.on("connection", async (socket) => {
     // const python_process = spawner('python', ['./game constructs/testing.py'])
     // Start the python process, JSON.stringify to pass as valid JSON object. - D.D.
     // const python_process = spawner('python3', ['./script.py', JSON.stringify(users_obj)])
-    // const python_process = spawner('python', ['./game constructs/StartGame.py', JSON.stringify(users_obj)])
-    // const python_process = spawner('python', ['./game constructs/testingInput.py'])
-    const python_process = spawner("python3", [
-      "server/game_constructs/TestingDiscardDeck.py",
+    const python_process = spawner("python", [
+      "./game constructs/StartGame.py",
+      JSON.stringify(users_obj),
     ]);
+    // const python_process = spawner('python', ['./game constructs/testingInput.py'])
+    // const python_process = spawner("python3", ["server/game_constructs/TestingDiscardDeck.py"]);
 
     // Add current python process to list of python processes that are currently running - D.D.
     // NOTE: need to add function where if a room is empty, or if a client has left, then kill the process
@@ -188,15 +189,24 @@ io.on("connection", async (socket) => {
 
           case "CHOICE":
             console.log("Server Found Flag: Choice Flag");
-            // NOTE: need to send to specific player... for now, sending to entire room for testing.
-            io.to(socket.data.room).emit("choice-update", JSON.parse(data));
-            // io.to(jsonMessage['socketID']).emit("choice-update", JSON.parse(data))
+            io.to(jsonMessage["socketID"]).emit(
+              "choice-update",
+              JSON.parse(data)
+            );
             break;
 
           case "SYSTEM":
             console.log("Server Found Flag: System Flag");
             io.to(socket.data.room).emit(
               "system-message-update",
+              JSON.parse(data)
+            );
+            break;
+
+          case "SYSTEM-PRIVATE":
+            console.log("Server Found Flag: System Private Flag");
+            io.to(jsonMessage["socketID"]).emit(
+              "system-private-update",
               JSON.parse(data)
             );
             break;
@@ -246,6 +256,11 @@ io.on("connection", async (socket) => {
               "discard-monster-update",
               JSON.parse(data)
             );
+            break;
+
+          case "STACK":
+            console.log("Server Found Flag: Stack Flag");
+            io.to(socket.data.room).emit("stack-update", JSON.parse(data));
             break;
 
           default:

@@ -98,17 +98,6 @@ class Bomb(Loot):
         playerList = room.getPlayers()
         monsterList = user.getBoard().getMonsters()
         # display the characters in the room
-        '''
-        playerList = room.getPlayers()
-        for i in range(len(playerList)):
-            print(f"{1+i}: {playerList[i].getCharacter().getName()}\n  HP: {playerList[i].getCharacter().getHp()}")
-        # display the active monsters
-        monsterList = user.getBoard().getMonsters()
-        for i in range(len(monsterList)):
-            print(f"{len(playerList) + i + 1}: {monsterList[i][-1].getName()}\n  HP: {monsterList[i][-1].getHp()}")
-        target = input("Target which creature with " + str(self.getName()) + "? :")
-        # CHOICE JSON
-        '''
         message = "Target which entity with the bomb"
         playerOptions = []
         for i in playerList:
@@ -228,18 +217,14 @@ class MegaBattery(Loot):
         return obj
 
     def use(self, user):
-        room = user.getRoom()
-        players = room.getPlayers()
-        allItems = Deck([])
-        num = int(input("Which player will you recharge all items?: "))
-        # CHOICE JSON
-        num -= 1
-        chosenDeck = players[num].getItems()
+        message = f"Choose a player to recharge."
+        chosenPlayer = user.chooseAnyPlayer(message)
+        chosenDeck = chosenPlayer.getItems()
         for i in range(chosenDeck.getDeckLength()):
             if isinstance(chosenDeck.getCardList()[i], GoldTreasure):
                 chosenDeck.getCardList()[i].setTapped(False)
         user.subtractTapped()
-        message = f"Player {user.getNumber()} played {self.name} and recharged all of Player {num+1}'s items!"
+        message = f"Player {user.getNumber()} played {self.name} and recharged all of Player {chosenPlayer.getNumber()}'s items!"
         Json.systemOutput(message)
         return
 
@@ -341,7 +326,6 @@ class PillsBlue(Loot):
             message = f"Jackpot, Player {user.getNumber()} gained 3 loot."
             Json.systemOutput(message)
         else:
-            user.getHand().printCardListNames()
             user.chooseDiscard(1, user)
             message = f"Bad trip! Player {user.getNumber()} lost 1 loot!"
             Json.systemOutput(message)
@@ -376,12 +360,12 @@ class SoulHeart(Loot):
         # choose a character to prevent 1 damage they would take this turn
         room = user.getRoom()
         room.displayCharacters()
-        index = int(input("Who do you want to choose for Soul Heart?"))
-        # CHOICE JSON
-        message = f"Player {user.getNumber()} played {self.name} to protect Player {index} <3"
+        message = f"Who do you want to protect with {self.name}?"
+        chosenPlayer = user.chooseAnyPlayer(message)
+        message = f"Player {user.getNumber()} played {self.name} to protect Player {chosenPlayer.getNumber()}. <3"
         Json.systemOutput(message)
         reduceDamage = ReduceDamage(1)
-        character = room.getEntity(index)
+        character = chosenPlayer.getCharacter()
         character.addInventory(reduceDamage)
         return
 
@@ -410,8 +394,9 @@ class TheMagician(Loot):
         stack = room.getStack()
         dice = stack.findDice()
         if isinstance(dice, Dice) == True:
-            val = int(input("What do you want to change to roll to?: "))
-            # CHOICE JSON
+            message = f"What do you want to change to roll to?"
+            Json.choiceOutput(user.getSocketId(), message, ["1", "2", "3", "4", "5", "6"])
+            val = int(input())
             dice.setResult(val)
             message = f"Player {user.getNumber()} played {self.name} and changed the dice roll to a {val}!"
             Json.systemOutput(message)
@@ -437,23 +422,16 @@ class TheHighPriestess(Loot):
 
     def use(self, user):
         room = user.getRoom()
-        playerList = room.getPlayers()
         room.displayEntities()
-        target = int(input(f"Target which creature with {self.name}: "))
-        # CHOICE JSON
+        message = f"Target which creature with {self.name}?"
+        entity = user.chooseAnyEntity(message)
         message = f"Player {user.getNumber()} rolls for {self.name}'s damage..."
         Json.systemOutput(message)
         count = rollDice(user)
         # stomp the selected target
-        if int(target) <= len(playerList):  # stomp player
-            room.getPlayers()[int(target) - 1].takeDamage(count, user)
-            message = f"Player {user.getNumber()} played {self.name} and stomped Player {target} for {count} damage!"
-            Json.systemOutput(message)
-        else:  # stomp monster
-            user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][-1].takeDamage(count, user)
-            message = f"Player {user.getNumber()} played {self.name} and stomped " \
-                      f"{user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][-1].getName()} for {count} damage!"
-            Json.systemOutput(message)
+        message = f"Player {user.getNumber()} played {self.name} and stomped {entity.getName()} for {count} damage!"
+        Json.systemOutput(message)
+        entity.takeDamage(count, user)
         user.subtractTapped()
         return
 
@@ -472,21 +450,24 @@ class TheEmperor(Loot):
         return obj
 
     def use(self, user):
-        deck = Deck([])
         room = user.getRoom()
         deck = user.drawMonster(5)
         # List the top 5 cards
-        deck.printCardListNames()
-        index = int(input(f'Which card do you want to return to the top of the monster deck: '))
-        # CHOICE JSON
+        message = "Chose a card to return to the top of the monster deck"
+        playerOption = []
+        for i in deck.getCardList():
+            playerOption.append(i.getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOption)
+        index = int(input()) - 1
         # put the chosen card to the top of the monster deck
-        room.getBoard().getMonsterDeck().addCardTop(deck.getCard(index - 1))
-        deck.removeCardIndex(index - 1)
+        room.getBoard().getMonsterDeck().addCardTop(deck.getCard(index))
+        deck.removeCardIndex(index)
         # add the cards back to the bottom of monster deck
         for i in range(deck.getDeckLength()):
             room.getBoard().getMonsterDeck().addCardBottom(deck.getCard(0))
             deck.removeCardIndex(0)
-        print(f"Player {user.getNumber()} played {self.name} and rearranged the Monster Deck.")
+        message = f"Player {user.getNumber()} played {self.name} and rearranged the Monster Deck."
+        Json.systemOutput(message)
         return
 
 # Choose a player or monster, prevent the next instance up to 2 damage they would take this turn
@@ -507,22 +488,12 @@ class TheHierophant(Loot):
         # choose an entity to protect from an instance of up to 2 damage
         room = user.getRoom()
         room.displayEntities()
-        index = int(input("Who do you want to choose for The Hierophant?"))
-        # CHOICE JSON
+        message = f"Who do you want to choose for {self.name}?"
+        entity = user.chooseAnyEntity(message)
         reduceDamage = ReduceDamage(2)
-        # if chosen entity is a monster
-        if isinstance(room.getEntity(index), Enemy):
-            # add the reduced damage to the enemy's inventory
-            enemy = room.getEntity(index)
-            enemy.addInventory(reduceDamage)
-            message = f"Player {user.getNumber()} played {self.name} to protect {room.getEntity(index).getName()}! :O"
-            Json.systemOutput(message)
-        else:
-            # if not an enemy, then add the reduce damage to the characters inventory
-            character = room.getEntity(index)
-            character.addInventory(reduceDamage)
-            message = f"Player {user.getNumber()} played {self.name} to protect Player {index}! :D"
-            Json.systemOutput(message)
+        entity.addInventory(reduceDamage)
+        message = f"Player {user.getNumber()} played {self.name} to protect {entity.getName()}! :O"
+        Json.systemOutput(message)
         return
 
 # choose a player they gain 2 hp till end of turn
@@ -540,15 +511,11 @@ class TheLovers(Loot):
         return obj
 
     def use(self, user):
-        room = user.getRoom()
-        playerList = room.getPlayers()
-        room.displayCharacters()
-        target = int(input("Give 2 HP to which player?: "))
-        # CHOICE JSON
-        target -= 1
-        hp = playerList[target].getHp()
-        playerList[target].setHp(hp + 2)
-        message = f"Player {user.getNumber()} played {self.name} to protect Player {target+1}! :D"
+        message = "Give 2 HP to which player?"
+        chosenPlayer = user.chooseAnyPlayer(message)
+        hp = chosenPlayer.getHp()
+        chosenPlayer.setHp(hp + 2)
+        message = f"Player {user.getNumber()} played {self.name} to protect Player {chosenPlayer.getNumber()}! :D"
         Json.systemOutput(message)
         user.subtractTapped()
         return
@@ -568,17 +535,13 @@ class TheChariot(Loot):
         return obj
 
     def use(self, user):
-        room = user.getRoom()
-        playerList = room.getPlayers()
-        room.displayCharacters()
-        target = int(input("Give HP and attack to which player?: "))
-        # CHOICE JSON
-        target -= 1
-        hp = playerList[target].getHp()
-        attack = playerList[target].getAttack()
-        playerList[target].setHp(hp + 1)
-        playerList[target].setAttack(attack + 1)
-        message = f"Player {user.getNumber()} played {self.name} to give Player {target+1} +1 ATK and +1 HP! ^-^"
+        message = f"Give HP and attack to which player?"
+        chosenPlayer = user.chooseAnyPlayer(message)
+        hp = chosenPlayer.getHp()
+        attack = chosenPlayer.getAttack()
+        chosenPlayer.setHp(hp + 1)
+        chosenPlayer.setAttack(attack + 1)
+        message = f"Player {user.getNumber()} played {self.name} to give Player {chosenPlayer.getNumber()} +1 ATK and +1 HP! ^-^"
         Json.systemOutput(message)
         user.subtractTapped()
         return
@@ -598,13 +561,9 @@ class Justice(Loot):
         return obj
 
     def use(self, user):
-        room = user.getRoom()
-        playerList = room.getPlayers()
-        room.displayCharacters()
-        target = int(input("Copy loot and cent from which player?: "))
-        # CHOICE JSON
-        target -= 1
-        target = playerList[target]
+        message = f"Copy loot and cent from which player?"
+        chosenPlayer = user.getChosenPlayer(message, user)
+        target = chosenPlayer
         userCoins = user.getCoins()
         targetCoins = target.getCoins()
         if userCoins < targetCoins:
@@ -615,9 +574,9 @@ class Justice(Loot):
         if userLoot < targetLoot:
             diff = targetLoot - userLoot
             user.loot(diff)
-            message = f"Player {user.getNumber()} played {self.name} to increase their hand up to {targetLoot} " \
-                      f"and cents up to {targetCoins}!"
-            Json.systemOutput(message)
+        message = f"Player {user.getNumber()} played {self.name} to increase their hand up to {targetLoot} " \
+                  f"and cents up to {targetCoins}!"
+        Json.systemOutput(message)
         user.subtractTapped()
         return
 
@@ -640,17 +599,21 @@ class TheHermit(Loot):
         room = user.getRoom()
         deck = user.drawTreasure(5)
         # List the top 5 cards
-        deck.printCardListNames()
-        index = int(input(f'Which card do you want to return to the top of the treasure deck: '))
-        # CHOICE JSON
+        message = "Chose a card to return to the top of the treasure deck"
+        playerOption = []
+        for i in deck.getCardList():
+            playerOption.append(i.getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOption)
+        index = int(input()) - 1
         # put the chosen card to the top of the treasure deck
-        room.getBoard().getTreasureDeck().addCardTop(deck.getCard(index - 1))
-        deck.removeCardIndex(index - 1)
+        room.getBoard().getTreasureDeck().addCardTop(deck.getCard(index))
+        deck.removeCardIndex(index)
         # add the cards back to the bottom of treasure deck
         for i in range(deck.getDeckLength()):
             room.getBoard().getTreasureDeck().addCardBottom(deck.getCard(0))
             deck.removeCardIndex(0)
-        print(f"Player {user.getNumber()} played {self.name} and rearranged the Treasure Deck!")
+        message = f"Player {user.getNumber()} played {self.name} and rearranged the Treasure Deck!"
+        Json.systemOutput(message)
         return
 
 # roll --
@@ -713,18 +676,15 @@ class Strength(Loot):
         return obj
 
     def use(self, user):
-        room = user.getRoom()
-        playerList = room.getPlayers()
-        room.displayCharacters()
-        target = int(input("Give strength to which player?: "))
-        # CHOICE JSON
-        target -= 1
-        target = playerList[target]
+        message = f"Use {self.name} on which player?"
+        chosenPlayer = user.chooseAnyPlayer(message)
+        target = chosenPlayer
         attack = target.getAttack()
         target.setAttack(attack + 1)
         target.getCharacter().addAttacksLeft()
-        print(f"Player {user.getNumber()} played {self.name} to give Player {target+1} "
-              f"+1 ATK and an additional attack this turn!")
+        message = f"Player {user.getNumber()} played {self.name} to give Player {chosenPlayer.getNumber()} +1 ATK and" \
+                  f" an additional attack this turn!"
+        Json.systemOutput(message)
         user.subtractTapped()
         return
 
@@ -746,9 +706,9 @@ class TheHangedMan(Loot):
         board = user.getRoom().getBoard()
         # get and show the top loot card
         lootCard = board.getLootDeck().deal()
-        lootCardChoice = int(input(f"{lootCard.getName()}\nDo you want to put this at the bottom of the Loot Deck?"
-                                   f"\n1. Yes\n2. No\nChoice: "))
-        # CHOICE JSON
+        message = f"{lootCard.getName()} Do you want to put this at the bottom of the Loot Deck?"
+        Json.choiceOutput(user.getSocketId(), message, ["Yes", "No"])
+        lootCardChoice = int(input())
         # if chooses to put at bottom of loot deck, then do that
         if lootCardChoice == 1:
             board.getLootDeck().addCardBottom(lootCard)
@@ -757,9 +717,9 @@ class TheHangedMan(Loot):
             board.getLootDeck().addCardTop(lootCard)
         # get and show the top treasure card
         treasureCard = board.getTreasureDeck().deal()
-        treasureCardChoice = int(input(f"{treasureCard.getName()}\nDo you want to put this at the bottom of the "
-                                       f"Treasure Deck? \n1. Yes\n2. No\nChoice: "))
-        # CHOICE JSON
+        message = f"{treasureCard.getName()} Do you want to put this at the bottom of the Treasure Deck?"
+        Json.choiceOutput(user.getSocketId(), message, ["Yes", "No"])
+        treasureCardChoice = int(input())
         # if chooses to put at bottom of treasure deck, then do that
         if treasureCardChoice == 1:
             board.getTreasureDeck().addCardBottom(treasureCard)
@@ -768,9 +728,9 @@ class TheHangedMan(Loot):
             board.getTreasureDeck().addCardTop(treasureCard)
         # get and show the top monster card
         monsterCard = board.getMonsterDeck().deal()
-        monsterCardChoice = int(input(f"{monsterCard.getName()}\nDo you want to put this at the bottom of the Monster "
-                                      f"Deck?\n1. Yes\n2. No\nChoice: "))
-        # CHOICE JSON
+        message = f"{monsterCard.getName()} Do you want to put this at the bottom of the Monster Deck?"
+        Json.choiceOutput(user.getSocketId(), message, ["Yes", "No"])
+        monsterCardChoice = int(input())
         # if chooses to put at bottom of monster deck, then do that
         if monsterCardChoice == 1:
             board.getMonsterDeck().addCardBottom(monsterCard)
@@ -779,7 +739,8 @@ class TheHangedMan(Loot):
             board.getMonsterDeck().addCardTop(monsterCard)
         # after, loot 2
         user.loot(2)
-        print(f"Player {user.getNumber()} played {self.name} scry the first card of each deck and loot 2.")
+        message = f"Player {user.getNumber()} played {self.name} scry the first card of each deck and loot 2."
+        Json.systemOutput(message)
         user.subtractTapped()
         return
 
@@ -798,14 +759,11 @@ class Death(Loot):
         return obj
 
     def use(self, user):
-        room = user.getRoom()
-        playerList = room.getPlayers()
-        room.displayCharacters()
-        target = int(input("Kill which player?: "))
-        # CHOICE JSON
-        target -= 1
-        target = playerList[target]
-        print(f"Player {user.getNumber()} played {self.name} to kill Player {target+1}!")
+        message = "Kill which player?"
+        chosenPlayer = user.chooseAnyPlayer(message)
+        target = chosenPlayer
+        message = f"Player {user.getNumber()} played {self.name} to kill Player {chosenPlayer.getNumber()}!"
+        Json.systemOutput(message)
         target.die(user)
         user.subtractTapped()
         return
@@ -825,8 +783,9 @@ class Temperance(Loot):
         return obj
 
     def use(self, user):
-        choice = int(input("Take 1 or 2 damage for reward?: "))
-        # CHOICE JSON
+        message = "Take 1 or 2 damage for reward?"
+        Json.choiceOutput(user.getSocketId(), message, ["1", "2"])
+        choice = int(input())
         message = f"Player {user.getNumber()} took {choice} damage to gain {4*choice} cents."
         Json.systemOutput(message)
         if choice == 1:
@@ -853,36 +812,26 @@ class TheDevil(Loot):
         return obj
 
     def use(self, user):
-        board = user.getRoom().getBoard()
-        players = user.getRoom().getPlayers()
-        if user.getItems().getDeckLength() < 1:
+        if user.getItems().getDeckLength() < 2:
+            message = "You do not have an item you can discard!"
+            Json.systemPrivateOutput(user.getSocketId(), message)
             user.subtractTapped()
             return
-        choice = int(input("Steal from another player ('1') or from the shop ('2')?: "))
-        # CHOICE JSON
+        message = "Steal from another player or from the shop?"
+        Json.choiceOutput(user.getSocketId(), message, ["Steal from player", "Steal from shop"])
+        choice = int(input())
         items = user.getItems()
-        items.printCardListNames()
-        itemIndex = int(input("Destroy which of your own items?: "))
-        # CHOICE JSON
-        itemIndex -= 1
-        board.discardTreasure(user, itemIndex)
+        user.chooseDiscardTreasure(user)
         if choice == 1: # steal from player
-            user.getRoom().displayCharacters()
-            choice2 = int(input("Steal from which player?: "))
-            # CHOICE JSON
-            choice2 -= 1
-            if players[choice2].getItems().getDeckLength() > 0: # so long as the chosen player has at least 1 item
-                players[choice2].getItems().printCardListNames()
-                itemChoice = int(input(f"Steal which item from player {choice2+1}?: "))
-                # CHOICE JSON
-                itemChoice -= 1
-                message = f"Player {user.getNumber()} played {self.name} to steal an item from Player {choice2+1}!!"
-                Json.systemOutput(message)
-                user.getBoard().stealTreasure(user, players[choice2], itemChoice)
+            user.chooseItemSteal()
         else:
-            board.displayActiveTreasures()
-            choice2 = int(input("Steal which item?: "))
-            # CHOICE JSON
+            shopItems = user.getBoard().getTreasures()
+            choices = []
+            for i in range(len(shopItems)):
+                choices.append(shopItems[i][0].getName())
+            message = f"Steal which item?"
+            Json.choiceOutput(user.getSocketId(), message, choices)
+            choice2 = int(input())
             message = f"Player {user.getNumber()} played {self.name} to steal an item from the shop!"
             Json.systemOutput(message)
             user.purchase(choice2)
@@ -966,12 +915,15 @@ class TheMoon(Loot):
         room = user.getRoom()
         deck = user.drawLoot(5)
         # List the top 5 cards
-        deck.printCardListNames()
-        index = int(input(f'Which card do you want to return to the top of the loot deck: '))
-        # CHOICE JSON
+        message = 'Chose a card to return to the top of the loot deck'
+        playerOption = []
+        for i in deck.getCardList():
+            playerOption.append(i.getName())
+        Json.choiceOutput(user.getSocketId(), message, playerOption)
+        index = int(input()) - 1
         # put th chosen card to the top of the loot deck
-        room.getBoard().getLootDeck().addCardTop(deck.getCard(index - 1))
-        deck.removeCardIndex(index - 1)
+        room.getBoard().getLootDeck().addCardTop(deck.getCard(index))
+        deck.removeCardIndex(index)
         # add the cards back to the bottom of loot deck
         for i in range(deck.getDeckLength()):
             room.getBoard().getLootDeck().addCardBottom(deck.getCard(0))
@@ -1008,21 +960,22 @@ class Judgement(Loot):
                     most = players[i].getSouls()
                     # clear the players with less souls from mostPlayer
                     mostPlayer = []
-                    mostPlayer.append(players[i].getNumber())
+                    mostPlayer.append(players[i])
         if most == 0: # no one has any souls
             message = f"Player {user.getNumber()} played {self.name}, but no one has any souls..."
             Json.systemOutput(message)
             return
-        print("Choose a player to discard a soul.\n")
+        message = "Choose a player to discard a soul."
+        Json.systemPrivateOutput(user.getSocketId(), message)
+        choiceOptions = []
         for i in range(len(mostPlayer)):
-            print(f"{i+1}: Player {mostPlayer[i]}")
-        choice = int(input("Choice: "))
-        # CHOICE JSON (the 4 lines above are all part of the choice)
-        choice -= 1
+            choiceOptions.append(f"{mostPlayer[i].getName()}")
+        Json.choiceOutput(user.getSocketId(), message, choiceOptions)
+        choice = int(input())
         # remove soul from chosen player
-        chosenPlayer = players[mostPlayer[choice] - 1]
+        chosenPlayer = mostPlayer[choice-1]
         chosenPlayer.subtractSouls(1)
-        message = f"Player {user.getNumber()} played {self.name} and forced Player {choice+1} to discard a soul!!"
+        message = f"Player {user.getNumber()} played {self.name} and forced Player {chosenPlayer.getNumber()} to discard a soul!!"
         Json.systemOutput(message)
         user.subtractTapped()
         return
@@ -1048,11 +1001,11 @@ class TheWorld(Loot):
             if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
                 pass  # skip showing player who used this card hands
             else:
-                # TODO: i dont think this should be a system print # SYSTEM JSON
                 # show the other players hands
                 message = f"{room.getPlayers()[i].getCharacter().getName()} Hand: "
-                Json.systemOutput(message)
-                room.getPlayers()[i].getHand().printCardListNames()
+                for i in room.getPlayers()[i].getHand().getCardList():
+                    message += i.getName() + " "
+                Json.systemPrivateOutput(user.getSocketId(), message)
         # after seeing all players hands, loot 2
         user.loot(2)
         message = f"After seeing everyone's hand, Player {user.getNumber()} looted 2 cards"

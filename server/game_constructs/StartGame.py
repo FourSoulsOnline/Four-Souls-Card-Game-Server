@@ -16,6 +16,9 @@ from Board import *
 from Characters import createCharactersWithNoItems
 from Player import Player
 from Room import Room
+from JsonOutputHelper import JsonOutputHelper
+
+Json = JsonOutputHelper()
 myStack = TheStack()
 myDice = Dice()
 
@@ -65,20 +68,18 @@ playersList = {
     "playersList": playerCharacterAndUsernames
 }
 print(json.dumps(playersList))
-time.sleep(3)
+time.sleep(1)
 sys.stdout.flush()
 
 # Print each player hand info, and also the board info to render on the frontend - D.D.
 for player in players:
-    print(json.dumps(player.getPlayerHandObject()))
-    time.sleep(3)
-    sys.stdout.flush()
-myRoom.printBoardSection()
-time.sleep(3)
+    Json.playerBoardOutput(player)
+    Json.playerHandOutput(player)
+time.sleep(1)
 
 myDice = Dice()
 myDice.roll()
 
 time.sleep(3)
 # Start the game...
-# myBoard.startTurn(myRoom.getPlayers()[0])
+myBoard.startTurn(myRoom.getPlayers()[0])

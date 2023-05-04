@@ -5,7 +5,7 @@ Events dont work correctly if they are on the board before the first players tur
 '''
 
 from Cards import Event
-from Dice import rollDice
+#from Dice import rollDice
 from Decks import Deck
 from JsonOutputHelper import JsonOutputHelper
 Json = JsonOutputHelper()

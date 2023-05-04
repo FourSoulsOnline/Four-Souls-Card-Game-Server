@@ -22,7 +22,6 @@ from SilverTreasureCards import *
 import sys
 from Board import checkGuppySoul
 from JsonOutputHelper import JsonOutputHelper
-
 Json = JsonOutputHelper()
 
 class Player:
@@ -36,12 +35,43 @@ class Player:
         # self.hand = Deck([])
         #self.hand = createBombCards()
         self.hand = createAllLootCards() # all loot cards are in player hand for debug purposes
-        #self.items = Deck([])
-        #self.items = createAllStartingItems()
-        self.items = createTreasureCards()
+        self.items = Deck([])
+        self.getStartingItem(character.getName())
+        # self.items = createAllStartingItems()
+        # self.items = createTreasureCards()
         #self.items.combineDeck(createDiceEffectTreasures())
         #self.items.combineDeck(createAllStartingItems())
         self.souls = 0
+
+    def getStartingItem(self, characterName):
+        theD6 = D6("D6", "test.jpg", True)
+        yumHeart = YumHeart("Yum Heart", "test.jpg", True)
+        sleightOfHand = SleightOfHand("Sleight Of Hand", "test.jpg", True)
+        bookOfBelial = BookOfBelial("Book Of Belial", "test.jpg", True)
+        foreverAlone = ForeverAlone("Forever Alone", "test.jpg", True)
+        theCurse = TheCurse("The Curse", "test.jpg", True)
+        bloodLust = BloodLust("Blood Lust", "test.jpg", True)
+        # lazarusRags = LazarusRags("Lazarus Rags", "test.jpg", True)
+        incubus = Incubus("Incubus", "test.jpg", True)
+        theBone = TheBone("The Bone", "test.jpg", True)
+        # edenStartingCard = EdenStartingCard("Eden Starting Item", "test.jpg", True)
+        characterItemDict = {
+            "Isaac": theD6,
+            "Maggy": yumHeart,
+            "Cain": sleightOfHand,
+            "Judas": bookOfBelial,
+            "Blue Baby": foreverAlone,
+            "Eve": theCurse,
+            "Samson": bloodLust,
+            # "Lazarus": lazarusRags,
+            "Lilith": incubus,
+            "The Forgotten": theBone,
+            # "Eden": edenStartingCard
+        }
+        self.items.addCardTop(characterItemDict[characterName])
+
+        
+
 
     # getters
 
@@ -92,7 +122,8 @@ class Player:
 
     def getAttack(self):
         return self.character.getAttack()
-    
+
+    '''
     def getPlayerHandObject(self):
         playerObject = {
             "messageFlag": "PLAYER-HAND",
@@ -114,6 +145,7 @@ class Player:
             "items": self.items.getJsonObject(),
         }
         return playerObject
+        '''
     
     def getJsonObject(self):
         playerObject = {
@@ -186,7 +218,25 @@ class Player:
         Json.choiceOutput(self.getSocketId(), message, playerOption)
         # then look for input from button press
         playerChoice = int(input())
-        return entities[playerChoice-1]
+        # return character enteties as player objects instead (necessary for death to work correctly because it is a player function)
+        if playerChoice <= len(self.room.getPlayers()):
+            return self.room.getPlayers()[playerChoice-1]
+        else: # return monster
+            return entities[playerChoice-1]
+
+    # choose a monster and return it
+    def chooseMonster(self, message):
+        numPlayers = len(self.room.getPlayers())
+        monsters = self.room.getEntities()[numPlayers:]
+        playerOption = []
+        # create an array of strings to pass into JSON
+        for i in monsters:
+            playerOption.append(i.getName())
+        # this passes and prints data for JSON
+        Json.choiceOutput(self.getSocketId(), message, playerOption)
+        # then look for input from button press
+        playerChoice = int(input())
+        return monsters[playerChoice - 1]
 
     # choose any active monster to attack, or the facedown monster, and return it
     def chooseAttackTarget(self, message):
@@ -287,10 +337,11 @@ class Player:
             # check if soul of gluttony should be awarded
             if (self.hand.getDeckLength() >= 10) and (self.getBoard().getSoulDict()['Gluttony'] is False):
                 self.getBoard().getSoulDict()['Gluttony'] = True
-                print(f"Player {self.num} achieved the Soul of Gluttony!\n")
+                message = f"Player {self.num} achieved the Soul of Gluttony!"
+                Json.systemOutput(message)
                 self.addSouls(1)
-        # PLAYER-HAND JSON
-        # PLAYER-BOARD JSON
+        Json.playerHandOutput(self)
+        Json.playerBoardOutput(self)
         return
 
     # add cards to players item deck
@@ -305,7 +356,7 @@ class Player:
             # the treasure must have a tag, add that card to global effects
             board = self.getBoard()
             board.getGlobalEffects().append([treasureCard, self])
-        # PLAYER-BOARD JSON
+        Json.playerBoardOutput(self)
         return
 
     # silver treasure --> plain silver treasure
@@ -342,12 +393,15 @@ class Player:
         playerOption = []
         message = "Which treasure card do you want to discard?"
         for i in player.getItems().getCardList():
-            playerOption.append(i.getName())
+            if i.getEternal() is not True:
+                playerOption.append(i.getName())
         Json.choiceOutput(player.getSocketId(), message, playerOption)
         inp = int(input())
         inp -= 1
-        treasure = player.getItems().getCard(inp)
+        treasure = player.getItems().getCardName(playerOption[inp])
         player.getBoard().getDiscardTreasureDeck().addCardTop(treasure)
+        message = f"Player {self.getNumber()} discarded {treasure.getName()}."
+        Json.systemOutput(message)
         return player.getItems().removeCardIndex(inp)
 
     # choose a loot card from your hand to discard
@@ -363,7 +417,7 @@ class Player:
         inp -= 1
         loot = player.getHand().getCard(inp)
         player.getBoard().getDiscardLootDeck().addCardTop(loot)
-        # PLAYER-HAND JSON
+        Json.playerHandOutput(player)
         return player.getHand().removeCardIndex(inp)
 
     # choose a loot card and return the index of that card in the player's hand
@@ -450,7 +504,7 @@ class Player:
             message = f"Player {self.num} achieved the Soul of Greed!\n"
             Json.systemOutput(message)
             self.addSouls(1)
-        # PLAYER-BOARD JSON
+        Json.playerBoardOutput(self)
         return
 
     def addHp(self, num):
@@ -534,7 +588,7 @@ class Player:
         self.getCharacter().setTapped(0)
         # set hp to 0
         self.setHp(0)
-        # PLAYER-BOARD JSON
+        Json.playerBoardOutput(self)
         # remove the player and attack roll from the stack (relevant if player dies to a bomb mid combat)
         stack = self.getRoom().getStack().getStack()
         if len(stack) == 0:
@@ -560,3 +614,8 @@ class Player:
     def addToItems(self, card):
         self.items.addCardBottom(card)
         return
+
+    def addInventory(self, effect):
+        self.character.addInventory(effect)
+        return
+

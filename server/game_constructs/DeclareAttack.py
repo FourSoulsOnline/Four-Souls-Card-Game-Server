@@ -11,12 +11,15 @@ from Cards import *
 from Coins import CoinStack
 from Coins import CoinStack
 from TreasureReward import TreasureReward
+from JsonOutputHelper import JsonOutputHelper
+Json = JsonOutputHelper()
 
 class DeclaredAttack:
     def __init__(self, monster):
         self.monster = monster
         self.name = "Declared Attack"
-        print("Attack added to stack")
+        message = "Attack added to stack"
+        Json.systemOutput(message)
 
     # getters
 
@@ -43,47 +46,27 @@ class DeclaredAttack:
 
             # loop while user and monster are alive
             while (user.getHp() > 0) and (self.monster.getHp() > 0):
-                '''
-                # add a new dice to the stack
-                attackRoll = Dice()
-                user.addToStack(attackRoll.roll())
-    
-                # use any cards played in response to the added dice before the dice resolves
-                if len(user.getRoom().getStack().getStack()) > 1:
-                    while user.getRoom().getStack().getStack()[-2][0].getName() != "Declared Attack":
-                        user.getRoom().getStack().useTop()
-                '''
                 from Dice import rollDice
-                print("Rolling for combat hit...")
+                message = f"Player {user.getNumber()} rolls for combat with {self.monster.getName()}..."
+                Json.systemOutput(message)
                 count = rollDice(user)
 
                 if len(user.getRoom().getStack().getStack()) > 0:
-                    #if isinstance(user.getRoom().getStack().getStack()[-1][0], Dice):
-                        # if user gets successful attack roll
-                            #if user.getRoom().getStack().getStack()[-1][0].getResult() >= self.monster.getDiceValue():'''
                     if count >= self.monster.getDiceValue():
                         # deal damage to monster
                         user.dealDamage(user.getCharacter().getAttack(), self.monster)
-                        #self.monster.takeDamage(user.getCharacter().getAttack(), user)
-                        print(f'\n{user.getCharacter().getName()} dealt {user.getCharacter().getAttack()} damage to {self.monster.getName()}\n {user.getCharacter().getName()} HP: {user.getHp()}\n '
-                              f'{self.monster.getName()} HP: {self.monster.getHp()}\n')
-
-                        # i think this is uneccessary bc die is proc'd in take damage
-                        # if the monster died, claim its rewards, discard it, and fill any empty monster slots
-                        #if self.monster.getHp() <= 0:
-                        #    self.monster.die(user)
+                        message = f"Player {user.getNumber()} dealt {user.getCharacter().getAttack()} damage to {self.monster.getName()}!"
+                        Json.systemOutput(message)
+                        #print(f'\n\n {user.getCharacter().getName()} HP: {user.getHp()}\n {self.monster.getName()} HP: {self.monster.getHp()}\n')
 
                     # if user misses their attack roll
                     else:
                         # deal damage to user
                         self.monster.dealDamage(self.monster.getAttack(), user)
-                        #user.takeDamage(self.monster.getAttack(), self.monster)
-                        print(f'Monster dealt {self.monster.getAttack()} damage to player\n {user.getCharacter().getName()} HP: {user.getHp()}\n '
-                              f'{self.monster.getName()} HP: {self.monster.getHp()}\n')
-                        # TODO: add player death to stack here
-                        if user.getHp() <= 0:
-                            print(f"{user.getCharacter().getName()} has died!")
-
+                        message = f"{self.monster.getName()} dealt {self.monster.getAttack()} damage to Player {user.getNumber()}!"
+                        Json.systemOutput(message)
+                        #print(f'\n {user.getCharacter().getName()} HP: {user.getHp()}\n  {self.monster.getName()} HP: {self.monster.getHp()}\n')
+                    Json.playerBoardOutput(user)
                 if (self.monster.getHp() == 0) or (user.getHp() == 0):
                     return # return early before attempting to pop from empty list (dice was already popped in die())
                 # Pops the stack to get rid of the dice roll that was just used

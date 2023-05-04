@@ -44,8 +44,8 @@ def lootPlay(player):
         playerId = player.getSocketId()
         Json.systemPrivateOutput(playerId, message)
     else:
-        player.getHand().printCardListNames() #TODO: Comment this line in final version
-        print(f"{player.getHand().getDeckLength() + 1}: Cancel\n") #TODO: this line too
+        #player.getHand().printCardListNames() #TODO: Comment this line in final version
+        #print(f"{player.getHand().getDeckLength() + 1}: Cancel\n") #TODO: this line too
         num = player.chooseLootIndex() + 1
         handLen = player.getHand().getDeckLength()
         # cancel the loot play
@@ -67,8 +67,7 @@ def lootPlay(player):
             # check that it is a loot card that is discarded when used
             if loot.getName() != "Lost Soul":
                 player.getBoard().getDiscardLootDeck().addCardTop(loot)
-            # DISCARD-LOOT JSON
-                Json.discardLootDeckOutput(player.getBoard().getDiscardLootDeck().getCardNamesAsJson())
+                Json.discardLootDeckOutput(player.getBoard().getDiscardLootDeck())
     return
 
 def itemPlay(player):
@@ -77,8 +76,8 @@ def itemPlay(player):
         playerId = player.getSocketId()
         Json.systemPrivateOutput(playerId, message)
     else:
-        player.getItems().printCardListNames() # TODO: comment this
-        print(f"{player.getItems().getDeckLength() + 1}: Cancel\n") # TODO: comment this
+        #player.getItems().printCardListNames() # TODO: comment this
+        #print(f"{player.getItems().getDeckLength() + 1}: Cancel\n") # TODO: comment this
         num = player.chooseTreasureIndex() + 1
         # cancel option
         if num > len(player.getItems().getCardList()):
@@ -125,7 +124,7 @@ def checkGuppySoul(treasureCard, player):
                 message = f"Player {player.getNumber()} achieved the Soul of Guppy!"
                 Json.systemOutput(message)
                 player.addSouls(1)
-                # PLAYER-BOARD JSON
+                Json.playerBoardOutput(player)
                 return
     return
 
@@ -133,7 +132,7 @@ class Board:
     def __init__(self, monsterDeck, treasureDeck, lootDeck):
         # max----Slots is the number of slots for that card type on the board
         self.maxMonsterSlots = 10
-        self.maxTreasureSlots = 10
+        self.maxTreasureSlots = 20
         # active----- is the populated slots for that card type. it should always be a list of lists
         # (even if the inside lists only have a single element)
         self.activeMonsters = [[], []] # active monsters are stored on the -1 index
@@ -227,7 +226,7 @@ class Board:
             if isinstance(player.getItems().getCardList()[i], GoldTreasure):
                 player.getItems().getCardList()[i].setTapped(False)
         # update what tools the player has accessible before using "start of turn" treasures
-        # PLAYER-BOARD JSON
+        Json.playerBoardOutput(player)
 
         # check for "at start of your turn" effects in globalEffects
         for i in range(len(self.globalEffects)):
@@ -247,8 +246,8 @@ class Board:
         inp = 0
         # increment activePlayer in room
         player.getRoom().incrementActivePlayer()
-        # PLAYER-BOARD JSON
-        # PLAYER-HAND JSON
+        Json.playerBoardOutput(player)
+        Json.playerHandOutput(player)
         #time.sleep(1)
         while inp != 6:
             # at the start of each action, create a timer
@@ -282,9 +281,9 @@ class Board:
                     Json.systemOutput(message)
                 else:
                     # show active monsters and prompt an attack
-                    self.displayActiveMonsters() #TODO: Comment this and prints out
-                    print(f"{len(self.activeMonsters) + 1}: FACE DOWN MONSTER")
-                    print(f"{len(self.activeMonsters) + 2}: CANCEL\n")
+                    #self.displayActiveMonsters() #TODO: Comment this and prints out
+                    #print(f"{len(self.activeMonsters) + 1}: FACE DOWN MONSTER")
+                    #print(f"{len(self.activeMonsters) + 2}: CANCEL\n")
                     message = f"What monster do you want to attack?"
                     monsterChoice = player.chooseAttackTarget(message)
                     # cover an existing monster
@@ -314,9 +313,9 @@ class Board:
                     Json.systemOutput(message)
                 else:
                     # show active treasures and prompt a purchase
-                    self.displayActiveTreasures() #TODO: comment this and prints out
-                    print(f"{len(self.activeTreasures) + 1}: FACE DOWN TREASURE")
-                    print(f"{len(self.activeTreasures) + 2}: CANCEL\n")
+                    #self.displayActiveTreasures() #TODO: comment this and prints out
+                    #print(f"{len(self.activeTreasures) + 1}: FACE DOWN TREASURE")
+                    #print(f"{len(self.activeTreasures) + 2}: CANCEL\n")
                     message = f"Which treasure would you like to purchase?"
                     treasureChoice = player.choosePurchaseTarget(message)
                     # cancel prompted purchase on invalid input
@@ -434,53 +433,13 @@ class Board:
                 self.activeMonsters[i].append(nextMonster)
                 # add event cards to the stack if drawn
                 if isinstance(nextMonster, Event):
-                    # MONSTER JSON  this is to show the event card
                     # We want to show the Event Card before popping it off of the monster section.
-                    monstersJson = []
-                    for j in range(len(self.activeMonsters)):
-                        # If the next card in the Monster Slot is an Event, construct the JSON for it - D.D.
-                        # HP/Attack/DiceValue are all 0, just need to show for frontend.
-                        # don't need to render empty json slots.
-                        if len(self.activeMonsters[j]) > 0:
-                            if isinstance(self.activeMonsters[j][0], Event):
-                                monster = {
-                                    "cardName": self.activeMonsters[j][0].getName(),
-                                    "hp": 0,
-                                    "attack": 0,
-                                    "diceValue": 0
-                                }
-                            elif isinstance(self.activeMonsters[j][0], Enemy):
-                                monster = {
-                                    "cardName": self.activeMonsters[j][0].getName(),
-                                    "hp": self.activeMonsters[j][0].getHp(),
-                                    "attack": self.activeMonsters[j][0].getAttack(),
-                                    "diceValue": self.activeMonsters[j][0].getDiceValue()
-                                }
-                            monstersJson.append(monster)
-                    Json.monsterOutput(monstersJson)
+                    Json.monsterOutput(self.activeMonsters)
                     player.getRoom().addToStack([nextMonster, player.getRoom().getActivePlayer()])
                     player.getRoom().useTopStack(0)
                     # is it possible that we may miss a monster slot here? ^ - D.D.
         # After filling all the spots, construct the Monster Array - D.D.
-        monstersJson = []
-        for j in range(len(self.activeMonsters)):
-            if isinstance(nextMonster, Event):
-                monster = {
-                    "cardName": self.activeMonsters[j][0].getName(),
-                    "hp": 0,
-                    "attack": 0,
-                    "diceValue": 0
-                }
-                monstersJson.append(monster)
-            elif isinstance(nextMonster, Enemy):
-                monster = {
-                    "cardName": self.activeMonsters[j][0].getName(),
-                    "hp": self.activeMonsters[j][0].getHp(),
-                    "attack": self.activeMonsters[j][0].getAttack(),
-                    "diceValue": self.activeMonsters[j][0].getDiceValue()
-                }
-                monstersJson.append(monster)
-        Json.monsterOutput(monstersJson)
+        Json.monsterOutput(self.activeMonsters)
         return
 
     # called at turn 0. fill slots and add revealed events to the bottom of the deck
@@ -504,17 +463,7 @@ class Board:
                 else:
                     # put the non-event card in the active slot
                     self.activeMonsters[i].append(nextMonster)
-        # MONSTER JSON
-        monstersJson = []
-        for i in range(len(self.activeMonsters)):
-            monster = {
-                "cardName": self.activeMonsters[i][0].getName(),
-                "hp": self.activeMonsters[i][0].getHp(),
-                "attack": self.activeMonsters[i][0].getAttack(),
-                "diceValue": self.activeMonsters[i][0].getDiceValue()
-            }
-            monstersJson.append(monster)
-        Json.monsterOutput(monstersJson)
+        Json.monsterOutput(self.activeMonsters)
         return
 
     def checkTreasureSlots(self):
@@ -529,10 +478,7 @@ class Board:
                 if self.treasureDeck.getDeckLength() <= 0:
                     raise IndexError("Treasure Deck is Empty")
                 self.activeTreasures[i].append(self.treasureDeck.deal())
-        treasuresJson = []
-        for i in range(len(self.activeTreasures)):
-            treasuresJson.append(self.activeTreasures[i][0].getName())
-        Json.treasureOutput(treasuresJson)
+        Json.treasureOutput(self.activeTreasures)
         return
 
     def addMonsterSlot(self):
@@ -547,55 +493,55 @@ class Board:
     # return the slot that the monster covers
     def coverMonster(self):
         topMonster = self.monsterDeck.deal()
-        print(f"The face down monster is revealed to be {topMonster.getName()}!")
+        message = f"The face down monster is revealed to be {topMonster.getName()}!"
+        Json.systemOutput(message)
         slotNum = int(input("Which slot would you like to cover?: "))
         self.activeMonsters[slotNum-1].append(topMonster)
-        # MONSTER JSON
+        Json.monsterOutput(self.activeMonsters)
         return slotNum
 
     # prints the name of each active monster
     def displayActiveMonsters(self):
-        print("Here are the monsters on the Board:")
-        for i in range(len(self.activeMonsters)):
-            if len(self.activeMonsters[i]) == 0:
-                print("Empty")
-            # print the name of the -1'th index of each monster slot
-            else:
-                print(f'{i + 1}: {self.activeMonsters[i][-1].getName()}')
-                print(f'  HP: {self.activeMonsters[i][-1].getHp()}')
-                print(f'  Dice: {self.activeMonsters[i][-1].getDiceValue()}')
-                print(f'  Attack: {self.activeMonsters[i][-1].getAttack()}')
-                # get the rewards of the monster into a string to display
-                rewardString = ""
-                for j in range(len(self.activeMonsters[i][-1].getReward())):
-                    if isinstance(self.activeMonsters[i][-1].getReward()[j], CoinStack):
-                        rewardString = rewardString + "    Coins: " + str(self.activeMonsters[i][-1].getReward()[j].getCount()) + "\n"
-                    elif isinstance(self.activeMonsters[i][-1].getReward()[j], LootReward):
-                        rewardString = rewardString + "    Loot: " + str(self.activeMonsters[i][-1].getReward()[j].getCount()) + "\n"
-                    elif isinstance(self.activeMonsters[i][-1].getReward()[j], TreasureReward):
-                        rewardString = rewardString + "    Treasure: " + str(self.activeMonsters[i][-1].getReward()[j].getCount()) + "\n"
-                    elif isinstance(self.activeMonsters[i][-1].getReward()[j], LootXReward):
-                        rewardString = rewardString + "    Loot: X" + "\n"
-                    elif isinstance(self.activeMonsters[i][-1].getReward()[j], CoinXReward):
-                        rewardString = rewardString + "    Coins: X" + "\n"
-                print(f'  Reward(s): \n{rewardString}')
+        #print("Here are the monsters on the Board:")
+        #for i in range(len(self.activeMonsters)):
+        #    if len(self.activeMonsters[i]) == 0:
+        #        print("Empty")
+        #    # print the name of the -1'th index of each monster slot
+        #    else:
+        #        print(f'{i + 1}: {self.activeMonsters[i][-1].getName()}')
+        #        print(f'  HP: {self.activeMonsters[i][-1].getHp()}')
+        #        print(f'  Dice: {self.activeMonsters[i][-1].getDiceValue()}')
+        #        print(f'  Attack: {self.activeMonsters[i][-1].getAttack()}')
+        #        # get the rewards of the monster into a string to display
+        #        rewardString = ""
+        #        for j in range(len(self.activeMonsters[i][-1].getReward())):
+        #            if isinstance(self.activeMonsters[i][-1].getReward()[j], CoinStack):
+        #                rewardString = rewardString + "    Coins: " + str(self.activeMonsters[i][-1].getReward()[j].getCount()) + "\n"
+        #            elif isinstance(self.activeMonsters[i][-1].getReward()[j], LootReward):
+        #                rewardString = rewardString + "    Loot: " + str(self.activeMonsters[i][-1].getReward()[j].getCount()) + "\n"
+        #            elif isinstance(self.activeMonsters[i][-1].getReward()[j], TreasureReward):
+        #                rewardString = rewardString + "    Treasure: " + str(self.activeMonsters[i][-1].getReward()[j].getCount()) + "\n"
+        #            elif isinstance(self.activeMonsters[i][-1].getReward()[j], LootXReward):
+        #                rewardString = rewardString + "    Loot: X" + "\n"
+        #            elif isinstance(self.activeMonsters[i][-1].getReward()[j], CoinXReward):
+        #                rewardString = rewardString + "    Coins: X" + "\n"
+        #        print(f'  Reward(s): \n{rewardString}')
         return
 
     def displayActiveTreasures(self):
-        print("Here are the treasures in the Shop (10 cents):")
-        for i in range(len(self.activeTreasures)):
-            if len(self.activeTreasures[i]) == 0:
-                print("Empty")
-            else:
-                print(f'{i + 1}: {self.activeTreasures[i][-1].getName()}\n')
+        #print("Here are the treasures in the Shop (10 cents):")
+        #for i in range(len(self.activeTreasures)):
+        #    if len(self.activeTreasures[i]) == 0:
+        #        print("Empty")
+        #    else:
+        #        print(f'{i + 1}: {self.activeTreasures[i][-1].getName()}\n')
         return
 
     def discardLoot(self, player, handIndex):
         discard = player.getHand().removeCardIndex(handIndex)
         self.discardLootDeck.addCardTop(discard)
-        # PLAYER-HAND JSON
-        # DISCARD LOOT JSON
-        Json.discardLootDeckOutput(self.discardLootDeck.getCardNamesAsJson())
+        Json.playerHandOutput(player)
+        Json.discardLootDeckOutput(self.discardLootDeck)
         return
 
     # a special case will need to be added for Sack of Pennies and The Poop
@@ -613,16 +559,16 @@ class Board:
                     break
         player.getItems().removeCardIndex(itemIndex)
         self.discardTreasureDeck.addCardTop(discard)
-        # PLAYER-BOARD JSON (for player who discarded the treasure only)
-        # DISCARD TREASURE JSON
+        Json.playerBoardOutput(player)
+        Json.discardTreasureDeckOutput(self.discardTreasureDeck)
         return
 
     # this function discards a monster in the matching index passed in as a parameter
     def discardMonsterIndex(self, index):
         discard = (self.activeMonsters[index]).pop(-1)
         self.discardMonsterDeck.addCardTop(discard)
-        # MONSTER JSON
-        # DISCARD MONSTER JSON
+        Json.monsterOutput(self.activeMonsters)
+        Json.discardMonsterDeckOutput(self.discardMonsterDeck)
         return
 
     # clears a treasure in the matching index (used when a player purchases an item)
@@ -644,7 +590,7 @@ class Board:
 
     # used to display a single monster, kinda not working correctly (testing with input 0-2), don't know if needed
     def displayMonster(self, index):
-        print(self.activeMonsters[index - 1][-1].getName())
+        #print(self.activeMonsters[index - 1][-1].getName())
         return
 
     # used to steal cards from another player, user will steal card from chosenPlayer4

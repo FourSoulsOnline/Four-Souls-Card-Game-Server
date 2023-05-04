@@ -4,14 +4,14 @@
 This file contains the class definitions for all card types and interfaces
 Classes for more specific cards (such as functional Loot cards) are in their individual python files
 '''
-# # Image is a class of the "Pillow" library
-# from PIL import Image
 import json
 from Coins import CoinStack
 from TreasureReward import TreasureReward
 #from Dice import Dice
 from DeclareAttack import DeclaredAttack
 from Effects import *
+from JsonOutputHelper import JsonOutputHelper
+Json = JsonOutputHelper()
 '''
 # this assigns a picture to an Image obj and then opens it
 # images should be defined using Image.open() and then passed into the init for Card (i think)
@@ -152,27 +152,25 @@ class Entity(Card):
                         break
         self.hp -= num
         if self.hp <= 0:
-            # enemy death
+            # death
             if isinstance(self, Enemy):
                 self.die(attacker)
         return
 
 
 # Character child class for Entity(Card)
-# startItem: string TODO: (maybe change it to a treasure card later)
 # tapped: int, the value in "tapped" is how many loot cards this character can play this turn
 # attacksLeft: int, the value in "attacksLeft" is how many attacks this character can initiate this turn
 # purchases: int, the value in "purchases" is how many items the character can buy from the shop this turn
 class Character(Entity):
-    def __init__(self, name, picture, maxHp, attack, startItem):
+    def __init__(self, name, picture, maxHp, attack):
         super().__init__(name, picture, maxHp, attack)
         self.hp = maxHp
         self.maxAttack = attack
-        self.startItem = startItem
         # range from 0-2. 2 means it is your turn and can play both your free and 'tapped' loot play
         # gets reduced to 1 at the end of your turn
         #self.tapped = 0
-        self.tapped = 1 # this should be 0 but is set to 1 for testing purposes
+        self.tapped = 1 # TODO: this should be 0 but is set to 1 for testing purposes
         self.attacksLeft = 0
         self.purchases = 0
         self.mandatoryAttacks = 0 # the number of times the character must attack again this turn
@@ -180,8 +178,7 @@ class Character(Entity):
 
     # getters
 
-    def getStartItem(self):
-        return self.startItem
+
 
     def getTapped(self):
         return self.tapped
@@ -334,7 +331,8 @@ class Enemy(Entity, Monster):
     # give awards for killing monster
     # takes the attacking player as a parameter
     def die(self, player):
-        print(f"{self.getName()} has died!\n")
+        message = f"{self.getName()} has died!"
+        Json.systemOutput(message)
         self.hp = 0
         # find the active player
         activePlayer = player.getRoom().getActivePlayer()
@@ -399,9 +397,9 @@ class Event(Monster):
         # Print Player Hand and Board for frontend rendering - D.D.
         playerList = activePlayer.getRoom().getPlayers()
         for player in playerList:
-            print(json.dumps(player.getPlayerHandObject()))
+            Json.playerHandOutput(player)
 
-        # PLAYER-BOARD JSON
+        Json.playerBoardOutput(activePlayer)
         board.checkMonsterSlots(activePlayer)
         return
 
@@ -441,6 +439,11 @@ class Treasure(Card):
             "card": super().getJsonObject(),
             "eternal": self.eternal
         }
+        # Built in python function to check if an object has an attribute.
+        if hasattr(self, 'tapped'):
+            treasureObject['tapped'] = self.tapped
+        else:
+            treasureObject['tapped'] = False
         return treasureObject
     # setters
 

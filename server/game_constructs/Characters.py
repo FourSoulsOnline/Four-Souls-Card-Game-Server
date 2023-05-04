@@ -7,49 +7,37 @@ from Cards import *
 from Decks import Deck
 from Effects import *
 from JsonOutputHelper import JsonOutputHelper
-
+from Dice import Dice
 Json = JsonOutputHelper()
 
 def createCharacterCards():
     # characters from the base game
-    # name, image, health, attack, maxAttack, starting item
-    D6 = D6()
-    YumHeart = YumHeart()
-    SleightOfHand = SleightOfHand()
-    BookOfBelial = BookOfBelial()
-    ForeverAlone = ForeverAlone()
-    TheCurse = TheCurse()
-    BloodLust = BloodLust()
-    LazarusRags = LazarusRags()
-    Incubus = Incubus()
-    TheBone = TheBone()
-    EdenStartingCard = EdenStartingCard()
-    isaac = Character("Isaac",                  "test image.jpg", 2, 1, 1, D6)
-    maggy = Character("Maggy",                  "test image.jpg", 2, 1, 1, YumHeart)
-    cain = Character("Cain",                    "test image.jpg", 2, 1, 1, SleightOfHand)
-    judas = Character("Judas",                  "test image.jpg", 2, 1, 1, BookOfBelial)
-    blue_baby = Character("Blue Baby",          "test image.jpg", 2, 1, 1, ForeverAlone)
-    eve = Character("Eve",                      "test image.jpg", 2, 1, 1, TheCurse)
-    samson = Character("Samson",                "test image.jpg", 2, 1, 1, BloodLust)
-    lazarus = Character("Lazarus",              "test image.jpg", 2, 1, 1, LazarusRags)
-    lilith = Character("Lilith",                "test image.jpg", 2, 1, 1, Incubus)
-    the_forgotten = Character("The Forgotten",  "test image.jpg", 2, 1, 1, TheBone)
-    eden = Character("Eden",                    "test image.jpg", 2, 1, 1, EdenStartingCard)
+    # name, image, health, attack, maxAttack
+    isaac = Character("Isaac",                  "test image.jpg", 2, 1, 1)
+    maggy = Character("Maggy",                  "test image.jpg", 2, 1, 1)
+    cain = Character("Cain",                    "test image.jpg", 2, 1, 1)
+    judas = Character("Judas",                  "test image.jpg", 2, 1, 1)
+    blue_baby = Character("Blue Baby",          "test image.jpg", 2, 1, 1)
+    eve = Character("Eve",                      "test image.jpg", 2, 1, 1)
+    samson = Character("Samson",                "test image.jpg", 2, 1, 1)
+    # lazarus = Character("Lazarus",              "test image.jpg", 2, 1, 1)
+    lilith = Character("Lilith",                "test image.jpg", 2, 1, 1)
+    the_forgotten = Character("The Forgotten",  "test image.jpg", 2, 1, 1)
+    # eden = Character("Eden",                    "test image.jpg", 2, 1, 1)
 
 def createCharactersWithNoItems():
-    itemMessage = "Item To Be Implemented"
     characterDeck = Deck([])
-    isaac = Character("Isaac", "test image.jpg", 2, 1,  itemMessage)
-    maggy = Character("Maggy", "test image.jpg", 2, 1,  itemMessage)
-    cain = Character("Cain", "test image.jpg", 2, 1,  itemMessage)
-    judas = Character("Judas", "test image.jpg", 2, 1,  itemMessage)
-    blue_baby = Character("Blue Baby", "test image.jpg", 2, 1,  itemMessage)
-    eve = Character("Eve", "test image.jpg", 2, 1,  itemMessage)
-    samson = Character("Samson", "test image.jpg", 2, 1,  itemMessage)
-    lazarus = Character("Lazarus", "test image.jpg", 2, 1,  itemMessage)
-    lilith = Character("Lilith", "test image.jpg", 2, 1, itemMessage)
-    the_forgotten = Character("The Forgotten", "test image.jpg", 2, 1,  itemMessage)
-    eden = Character("Eden", "test image.jpg", 2, 1,  itemMessage)
+    isaac = Character("Isaac", "test image.jpg", 2, 1)
+    maggy = Character("Maggy", "test image.jpg", 2, 1)
+    cain = Character("Cain", "test image.jpg", 2, 1)
+    judas = Character("Judas", "test image.jpg", 2, 1)
+    blue_baby = Character("Blue Baby", "test image.jpg", 2, 1)
+    eve = Character("Eve", "test image.jpg", 2, 1)
+    samson = Character("Samson", "test image.jpg", 2, 1)
+    # lazarus = Character("Lazarus", "test image.jpg", 2, 1)
+    lilith = Character("Lilith", "test image.jpg", 2, 1)
+    the_forgotten = Character("The Forgotten", "test image.jpg", 2, 1)
+    # eden = Character("Eden", "test image.jpg", 2, 1)
     characterDeck.addCardTop(isaac)
     characterDeck.addCardTop(maggy)
     characterDeck.addCardTop(cain)
@@ -57,10 +45,10 @@ def createCharactersWithNoItems():
     characterDeck.addCardTop(blue_baby)
     characterDeck.addCardTop(eve)
     characterDeck.addCardTop(samson)
-    characterDeck.addCardTop(lazarus)
+    # characterDeck.addCardTop(lazarus)
     characterDeck.addCardTop(lilith)
     characterDeck.addCardTop(the_forgotten)
-    characterDeck.addCardTop(eden)
+    # characterDeck.addCardTop(eden)
     return characterDeck
 
 class D6(GoldTreasure):
@@ -75,6 +63,8 @@ class D6(GoldTreasure):
         room = user.getRoom()
         stack = room.getStack()
         dice = stack.findDice()
+        # was getting error when playing D6, that Dice is not imported.
+        from Dice import Dice
         if isinstance(dice, Dice) == True:
             dice.roll()
             message = f"the dice has been re-rolled to {dice.getResult()}"
@@ -240,23 +230,33 @@ class TheCurse(GoldTreasure):
     def use(self, user):
         room = user.getRoom()
         # put top card of a discard on top of its deck
-        choice = int(input("Which discard deck do you want to choose\n1.Loot deck\n2.Monster Deck\n3.Treasure Deck"
-                          "\nChoice: "))
+        message = "Choose a discard deck to put the top card on top of it's deck"
+        Json.choiceOutput(user.getSocketId(), message, ["Loot", "Monster", "Treasure"])
+        choice = int(input())
         # check to make sure discard deck isn't empty, then add top card from discard back to draw deck
         if choice == 1:
             if room.getBoard().getDiscardLootDeck().getDeckLength() == 0:
-                print("The Loot discard deck is empty")
+                message = "The Loot discard deck is empty"
+                Json.systemOutput(message)
             else:
+                message = "The top card from the discard loot deck was put on top of the loot deck"
+                Json.systemOutput(message)
                 room.getBoard().getLootDeck().addCardTop(room.getBoard().getDiscardLootDeck().deal())
         elif choice == 2:
             if room.getBoard().getDiscardMonsterDeck().getDeckLength() == 0:
-                print("The Monster discard deck is empty")
+                message = "The Monster discard deck is empty"
+                Json.systemOutput(message)
             else:
+                message = "The top card from the discard monster deck was put on top of the monster deck"
+                Json.systemOutput(message)
                 room.getBoard().getMonsterDeck().addCardTop(room.getBoard().getDiscardMonsterDeck().deal())
         elif choice == 3:
             if room.getBoard().getDiscardTreasureDeck().getDeckLength() == 0:
-                print("The Treasure discard deck is empty")
+                message = "The Treasure discard deck is empty"
+                Json.systemOutput(message)
             else:
+                message = "The top card from the discard treasure deck was put on top of the treasure deck"
+                Json.systemOutput(message)
                 room.getBoard().getTreasureDeck().addCardTop(room.getBoard().getDiscardTreasureDeck().deal())
         self.tapped = True
         return
@@ -270,11 +270,11 @@ class BloodLust(GoldTreasure):
 
     def use(self, user):
         # choose player or monster to gain 1 attack until end of turn
-        room = user.getRoom()
-        room.displayEntities()
-        index = int(input("Who do you want to choose for Blood Lust?"))
-        entity = room.getEntity(index)
+        message = f"Who do you want to buff with {self.name}?"
+        entity = user.chooseAnyEntity(message)
         entity.setAttack(entity.getAttack() + 1)
+        message = f"Player {user.getNumber()} buffed {entity.getName()}'s attack with {self.name}."
+        Json.systemOutput(message)
         self.tapped = True
         return
 
@@ -298,45 +298,52 @@ class Incubus(GoldTreasure):
 
     def use(self, user):
         room = user.getRoom()
-        choice = int(input("Choose an option\n1.Swap a card from your hand with a card from another players hand"
-                           "\n2.Loot one then put card from your hand to top of loot deck\nChoice: "))
+        message = "Choose to swap a loot card with another player or loot 1 and put a card from hand on top of loot deck"
+        Json.choiceOutput(user.getSocketId(), message, ["Swap", "Loot"])
+        choice = int(input())
         # option 1 look at a players hand and MAY swap a card with one of yours
         if choice == 1:
             # Shows players to select from
-            print("Which player do you want to swap a card with")
-            for i in range(len(room.getPlayers())):
-                if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
-                    pass
-                else:
-                    print(f'{i + 1} :{room.getPlayers()[i].getCharacter().getName()}')
-            playerChoice = int(input("Choice: "))
-            print("What card from their hand do you want")
-            room.getPlayers()[playerChoice - 1].getHand().printCardListNames()
+            message = "Choose a player to swap a card with"
+            playerChoice = user.getChosenPlayer(message, user)
+            message = "Choose a card from their hand to swap"
+            playerOption = []
+            for i in playerChoice.getHand().getCardList():
+                playerOption.append(i.getName())
+            playerOption.append("Cancel")
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
             # give choice to not swap cards, they MAY
-            print(f"{room.getPlayers()[playerChoice - 1].getHand().getDeckLength() + 1}:Cancel")
-            cardChoice = int(input("Choice:"))
+            cardChoice = int(input())
             # If they choose to cancel do nothing
-            if cardChoice == room.getPlayers()[playerChoice - 1].getHand().getDeckLength() + 1:
+            if cardChoice == playerChoice.getHand().getDeckLength() + 1:
                 print("Canceling...")
                 return
             else:
-                playerCard = room.getPlayers()[playerChoice - 1].getHand().getCard(cardChoice - 1)
-                room.getPlayers()[playerChoice - 1].getHand().removeCardIndex(cardChoice - 1)
-                print("What card from your hand do you want to give them")
-                user.getHand().printCardListNames()
-                userChoice = int(input("Choice: "))
+                playerCard = playerChoice.getHand().getCard(cardChoice - 1)
+                playerCard.getHand().removeCardIndex(cardChoice - 1)
+                message = "Choose a card from your hand to swap"
+                playerOption = []
+                for i in user.getHand().getCardList():
+                    playerOption.append(i.getName())
+                Json.choiceOutput(user.getSocketId(), message, playerOption)
+                userChoice = int(input())
                 userCard = user.getHand().getCard(userChoice - 1)
                 user.getHand().removeCardIndex(userChoice - 1)
-                room.getPlayers()[playerChoice - 1].getHand().addCardTop(userCard)
+                playerChoice.getHand().addCardTop(userCard)
                 user.getHand().addCardTop(playerCard)
+                message = f"Player {user.getNumber()} and Player {playerChoice.getNumber()} swapped a loot card"
+                Json.systemOutput(message)
         # option 2 loot one then put one card from your hand to top of loot deck
         elif choice == 2:
             user.loot(1)
-            print("Choose which card to put on top of the loot deck")
-            user.getHand().printCardListNames()
-            index = int(input("Choice: "))
-            room.getBoard().getLootDeck().addCardTop(user.getHand().getCard(index - 1))
-            user.getHand().removeCardIndex(index - 1)
+            message = "Choose which card to put on top of the loot deck"
+            playerOption = []
+            for i in user.getHand().getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            index = int(input()) - 1
+            room.getBoard().getLootDeck().addCardTop(user.getHand().getCard(index))
+            user.getHand().removeCardIndex(index)
         self.tapped = True
         return
 
@@ -349,12 +356,15 @@ class TheBone(GoldTreasure):
         self.counter = 0
 
     def use(self, user):
-        choice = int(input("What option do you want to do\n1:Put a counter on this card\n2.Remove 1 counter,"
-                           "add 1 to a dice roll\n3.Remove 2 counters, deal 1 damage to monster or player"
-                           "\n4.Remove 5 counters, this card loses all abilities but becomes a soul\nChoice: "))
+        message = "Choose to put a counter, to remove 1 counter and add 1 to dice roll, to remove 2 counters and deal 1 " \
+                  "damage to a monster or player, remove 5 counters and this card becomes a soul but loses all abilities"
+        Json.choiceOutput(user.getSocketId(), message, ["+1 Counter", "-1 Add 1 dice roll", "-2 Deal 1 damage to Entity", "-5 Gain a soul"])
+        choice = int(input())
         # option 1 put a counter on this
         if choice == 1:
             self.counter += 1
+            message = f"A counter has been added to {self.name}"
+            Json.systemOutput(message)
         # option 2 remove 1 counter, add 1 to a die roll
         elif choice == 2 and self.counter >= 1:
             self.counter -= 1
@@ -363,41 +373,38 @@ class TheBone(GoldTreasure):
             dice = stack.findDice()
             # look for a die and increase the number by 1
             if isinstance(dice, Dice) == True:
+                message = "Dice value was increased by 1"
+                Json.systemOutput(message)
                 dice.incrementUp()
             else:
-                print("No dice found")
+                message = "No dice found"
+                Json.systemOutput(message)
             return
         # option 3 remove 2 counters, deal 1 damage to monster or player
         elif choice == 3 and self.counter >= 2:
             self.counter -= 2
-            room = user.getRoom()
             # display the characters in the room
-            playerList = room.getPlayers()
-            for i in range(len(playerList)):
-                print(
-                    f"{1 + i}: {playerList[i].getCharacter().getName()}\n  HP: {playerList[i].getCharacter().getHp()}")
-            # display the active monsters
-            monsterList = user.getBoard().getMonsters()
-            for i in range(len(monsterList)):
-                print(f"{len(playerList) + i + 1}: {monsterList[i][-1].getName()}\n  HP: {monsterList[i][-1].getHp()}")
-            target = input("Target which creature with " + str(self.getName()) + "? :")
-            # bomb the selected target
-            if int(target) <= len(playerList):  # deal 1 damage to player
-                room.getPlayers()[int(target) - 1].takeDamage(1, user)
-            else:  # deal 1 damage to monster
-                user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][-1].takeDamage(1, user)
+            message = f"Target which creature with {self.name}"
+            chosenEntity = user.chooseAnyEntity(message)
+            # Deal 1 damage to the selected target
+            message = f"{self.name} did 1 damage to {chosenEntity.getName()}"
+            Json.systemOutput(message)
+            chosenEntity.takeDamage(1, user)
         # option 4 remove 5 counters, this becomes a soul and loses all abilities
         elif choice == 4 and self.counter >= 5:
             user.addSouls(1)
             for i in range(user.getItems().getDeckLength()):
-                if user.getItems().getCard(i - 1).getName() == "THE BONE":
+                if user.getItems().getCard(i - 1).getName() == self.name:
                     self.eternal = False
                     user.getItems().removeCardIndex(i - 1)
                 # remove this card from their hand
+                Json.playerBoardOutput(user)
         else:
-            print("Not enough counters")
+            message = f"Not enough counters, currently have {self.counter} counters"
+            Json.systemOutput(message)
             return
-        #self.tapped = True
+        message = f"{self.name} has {self.counter} counters"
+        Json.systemOutput(message)
         return
 
 class EdenStartingCard(GoldTreasure):

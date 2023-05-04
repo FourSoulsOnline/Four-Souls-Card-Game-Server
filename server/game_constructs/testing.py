@@ -18,7 +18,7 @@ from Events import createEventCards
 
 myStack = TheStack()
 myLootDeck = createAllLootCards()
-#myLootDeck.shuffle()
+myLootDeck.shuffle()
 myMonsterDeck = createAllEnemies()
 newMonster = createAdditionalEnemeies()
 newMonster.combineDeck(myMonsterDeck)
@@ -35,15 +35,15 @@ myTreasureDeck = SilverTreasures
 myBoard = Board(myMonsterDeck, myTreasureDeck, myLootDeck)
 myRoom = Room(myStack, myBoard)
 
-isaac = Character("Isaac", "test image.jpg", 2, 1, "The D6")
-samson = Character("Samson", "test image.jpg", 2, 1, "Bloody Lust")
-maggy = Character("Maggy", "test image.jpg", 2, 1, "Yum Heart")
-the_lost = Character("The Lost", "test image.jpg", 1, 1, "Holy Mantle")
+isaac = Character("Isaac", "test image.jpg", 2, 1)
+samson = Character("Samson", "test image.jpg", 2, 1)
+maggy = Character("Maggy", "test image.jpg", 2, 1)
+cain = Character("Cain", "test image.jpg", 2, 1)
 
-player1 = Player(isaac, 1, myRoom, "socket", "username")
-player2 = Player(samson, 2, myRoom, "socket", "username")
-player3 = Player(maggy, 3, myRoom, "socket", "username")
-player4 = Player(the_lost, 4, myRoom, "socket", "username")
+player1 = Player(isaac, 1, myRoom, "1", "username")
+player2 = Player(samson, 2, myRoom, "2", "username")
+player3 = Player(maggy, 3, myRoom, "3", "username")
+player4 = Player(cain, 4, myRoom, "4", "username")
 
 myRoom.addPlayer(player1)
 myRoom.addPlayer(player2)
