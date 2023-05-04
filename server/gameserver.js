@@ -136,15 +136,15 @@ io.on("connection", async (socket) => {
 
     // Below are different python processes we can use to run when a game has started.
 
-    // const python_process = spawner('python', ['./game constructs/testing.py'])
+    // const python_process = spawner('python', ['server/game_constructs/testing.py'])
     // Start the python process, JSON.stringify to pass as valid JSON object. - D.D.
     // const python_process = spawner('python3', ['./script.py', JSON.stringify(users_obj)])
     const python_process = spawner("python", [
-      "./game constructs/StartGame.py",
+      "server/game_constructs/StartGame.py",
       JSON.stringify(users_obj),
     ]);
-    // const python_process = spawner('python', ['./game constructs/testingInput.py'])
-    // const python_process = spawner("python3", ["server/game_constructs/TestingDiscardDeck.py"]);
+    // const python_process = spawner('python', ['server/game_constructs/testingInput.py'])
+    // const python_process = spawner("python", ["server/game_constructs/TestingDiscardDeck.py"]);
 
     // Add current python process to list of python processes that are currently running - D.D.
     // NOTE: need to add function where if a room is empty, or if a client has left, then kill the process
