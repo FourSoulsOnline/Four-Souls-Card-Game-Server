@@ -242,6 +242,8 @@ class Board:
 
         # check for "at start of your turn" effects in globalEffects
         for i in range(len(self.globalEffects)):
+            if (i + 1) > len(self.globalEffects):
+                pass
             if isinstance(self.globalEffects[i][0], StartTurnTreasure):
                 # if it is the start of the itemUsers turn
                 itemUser = self.globalEffects[i][1]
