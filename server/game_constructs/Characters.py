@@ -479,10 +479,10 @@ class EdenStartingCard(GoldTreasure):
 
 def createAllStartingItems():
     startingDeck = Deck([])
-    startingDeck.addCardBottom(D6("D6", "test.jpg", True))
+    startingDeck.addCardBottom(D6("The D6", "test.jpg", True))
     startingDeck.addCardBottom(YumHeart("Yum Heart", "test.jpg", True))
-    startingDeck.addCardBottom(SleightOfHand("Sleight Of Hand", "test.jpg", True))
-    startingDeck.addCardBottom(BookOfBelial("Book Of Belial", "test.jpg", True))
+    startingDeck.addCardBottom(SleightOfHand("Sleight of Hand", "test.jpg", True))
+    startingDeck.addCardBottom(BookOfBelial("Book of Belial", "test.jpg", True))
     startingDeck.addCardBottom(ForeverAlone("Forever Alone", "test.jpg", True))
     startingDeck.addCardBottom(TheCurse("The Curse", "test.jpg", True))
     startingDeck.addCardBottom(BloodLust("Blood Lust", "test.jpg", True))

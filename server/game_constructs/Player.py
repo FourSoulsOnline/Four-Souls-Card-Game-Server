@@ -47,10 +47,10 @@ class Player:
         self.souls = 0
 
     def getStartingItem(self, characterName):
-        theD6 = D6("D6", "test.jpg", True)
+        theD6 = D6("The D6", "test.jpg", True)
         yumHeart = YumHeart("Yum Heart", "test.jpg", True)
-        sleightOfHand = SleightOfHand("Sleight Of Hand", "test.jpg", True)
-        bookOfBelial = BookOfBelial("Book Of Belial", "test.jpg", True)
+        sleightOfHand = SleightOfHand("Sleight of Hand", "test.jpg", True)
+        bookOfBelial = BookOfBelial("Book of Belial", "test.jpg", True)
         foreverAlone = ForeverAlone("Forever Alone", "test.jpg", True)
         theCurse = TheCurse("The Curse", "test.jpg", True)
         bloodLust = BloodLust("Blood Lust", "test.jpg", True)
