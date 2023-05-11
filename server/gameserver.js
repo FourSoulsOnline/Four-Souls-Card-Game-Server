@@ -12,8 +12,6 @@ import { Server } from "socket.io";
 import childProcess from "child_process";
 import zlib from "zlib";
 
-const spawner = childProcess.spawn;
-
 // Use gameServer as an instance of express
 const gameServer = express();
 
@@ -261,6 +259,11 @@ io.on("connection", async (socket) => {
           case "STACK":
             console.log("Server Found Flag: Stack Flag");
             io.to(socket.data.room).emit("stack-update", JSON.parse(data));
+            break;
+
+          case "WINNER":
+            console.log("Server Found Flag: Winner Flag");
+            io.to(socket.data.room).emit("win-condition", JSON.parse(data));
             break;
 
           default:

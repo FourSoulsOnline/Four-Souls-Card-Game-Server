@@ -3,9 +3,9 @@
 #       All files
 #   Ethan Sandoval:
 #       checkResponse
-'''
+"""
 Everything is within a Room (Stack, Board, Players)
-'''
+"""
 import time
 import json
 import sys
@@ -18,6 +18,7 @@ from JsonOutputHelper import JsonOutputHelper
 
 Json = JsonOutputHelper()
 
+
 class Room:
     def __init__(self, stack, board):
         self.stack = stack
@@ -29,28 +30,24 @@ class Room:
     # getters
     def getPlayersJsonObject(self):
         if len(self.players) == 0:
-            playersListJsonObject = {
-                "players": ["no players"]
-            }
+            playersListJsonObject = {"players": ["no players"]}
         else:
             playersJsonObjects = []
             for i in range(len(self.players)):
                 playersJsonObjects.append(self.players[i].getJsonObject())
-            playersListJsonObject = {
-                "players": playersJsonObjects
-            }
+            playersListJsonObject = {"players": playersJsonObjects}
         return playersListJsonObject
-    
+
     def getJsonObject(self):
         playersObject = self.getPlayersJsonObject()
         roomJsonObject = {
             "theStack": self.stack.getJsonObject(),
             "playersList": playersObject,
             "board": self.board.getJsonObject(),
-            "activePlayerIndex": self.activePlayerIndex
+            "activePlayerIndex": self.activePlayerIndex,
         }
         return roomJsonObject
-    
+
     def getPlayers(self):
         return self.players
 
@@ -77,7 +74,7 @@ class Room:
         return
 
     def incrementActivePlayer(self):
-        self.activePlayerIndex = (self.activePlayerIndex + 1) % 4
+        self.activePlayerIndex = (self.activePlayerIndex + 1) % len(self.players)
         return
 
     # reaction system
@@ -85,16 +82,24 @@ class Room:
     def checkResponse(self, playerIndex):
         anyYes = False
         message = f"Player {self.players[playerIndex].getNumber()}, do you want to respond to {self.getStack().getStack()[-1][0].getName()}"
-        Json.choiceOutput(self.players[playerIndex].getSocketId(), message, ["Yes", "No"])
+        Json.choiceOutput(
+            self.players[playerIndex].getSocketId(), message, ["Yes", "No"]
+        )
         inp1 = int(input())
         if inp1 == 1:
             message = "Do you want to play a loot card from your hand or play an active treasure"
-            Json.choiceOutput(self.players[playerIndex].getSocketId(), message, ["Loot Card", "Treasure Card", "Cancel"])
+            Json.choiceOutput(
+                self.players[playerIndex].getSocketId(),
+                message,
+                ["Loot Card", "Treasure Card", "Cancel"],
+            )
             inp2 = int(input())
             if inp2 == 1:
                 if self.players[playerIndex].getTapped() < 1:
                     message = "You can't play any more loot cards this turn."
-                    Json.systemPrivateOutput(self.players[playerIndex].getSocketId(), message)
+                    Json.systemPrivateOutput(
+                        self.players[playerIndex].getSocketId(), message
+                    )
                 else:
                     anyYes = True
                     lootPlay(self.players[playerIndex])
@@ -129,10 +134,11 @@ class Room:
         if len(self.stack.getStack()) == 0:
             return
         # TODO: need to add another or for death effects
-        if isinstance(self.stack.getStack()[0][0], DeclaredAttack) and \
-                (isinstance(self.stack.getLastResolved()[0], Dice) or
-                 isinstance(self.stack.getLastResolved()[0], TakeDamageTreasure) or
-                 isinstance(self.stack.getLastResolved()[0], DiceEffectTreasure)):
+        if isinstance(self.stack.getStack()[0][0], DeclaredAttack) and (
+            isinstance(self.stack.getLastResolved()[0], Dice)
+            or isinstance(self.stack.getLastResolved()[0], TakeDamageTreasure)
+            or isinstance(self.stack.getLastResolved()[0], DiceEffectTreasure)
+        ):
             # return early to prevent a prompted response for a declared attack after it has already been added to the stack
             return
         # check for responses here
@@ -157,10 +163,11 @@ class Room:
         if len(self.stack.getStack()) == 0:
             return
         # TODO: need to add another or for death effects
-        if isinstance(self.stack.getStack()[0][0], DeclaredAttack) and \
-                (isinstance(self.stack.getLastResolved()[0], Dice) or
-                 isinstance(self.stack.getLastResolved()[0], TakeDamageTreasure) or
-                 isinstance(self.stack.getLastResolved()[0], DiceEffectTreasure)):
+        if isinstance(self.stack.getStack()[0][0], DeclaredAttack) and (
+            isinstance(self.stack.getLastResolved()[0], Dice)
+            or isinstance(self.stack.getLastResolved()[0], TakeDamageTreasure)
+            or isinstance(self.stack.getLastResolved()[0], DiceEffectTreasure)
+        ):
             # return early to prevent a prompted response for a declared attack after it has already been added to the stack
             return
         # check for responses here
@@ -171,17 +178,17 @@ class Room:
         return
 
     def displayEntities(self):
-        #entities = []
-        #for i in range(len(self.players)):
+        # entities = []
+        # for i in range(len(self.players)):
         #    entities.append(self.players[i].getCharacter())
-        #for i in range(self.board.getMaxMonsterSlots()):
+        # for i in range(self.board.getMaxMonsterSlots()):
         #    entities.append(self.board.getMonster(i + 1))
-        #for i in range(len(entities)):
+        # for i in range(len(entities)):
         #    print(f"{i + 1}: {entities[i].getName()}")
         return
 
     def displayCharacters(self):
-        #for i in range(len(self.players)):
+        # for i in range(len(self.players)):
         #    character = self.players[i].getCharacter()
         #    print(f"{i + 1}: {character.getName()}\n  HP: {character.getHp()}\n  Coins: {self.players[i].getCoins()}"
         #          f"\n  Items: {len(self.players[i].getItems().getCardList())}\n  Souls: {self.players[i].getSouls()}\n")
@@ -200,13 +207,14 @@ class Room:
         for i in range(len(self.players)):
             entities.append(self.players[i].getCharacter())
         for i in range(self.board.getMaxMonsterSlots()):
-            entities.append(self.board.getMonster(i + 1))  # did +1 because getMonster already -1,
+            entities.append(
+                self.board.getMonster(i + 1)
+            )  # did +1 because getMonster already -1,
             # but we need to start at 0 not -1
         return entities
-    
+
     def printBoardSection(self):
         for player in self.players:
             print(json.dumps(player.getPlayerBoardSectionObject()))
-            #time.sleep(1)
+            # time.sleep(1)
             sys.stdout.flush()
-

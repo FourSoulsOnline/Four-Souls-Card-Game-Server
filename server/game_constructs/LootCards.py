@@ -8,18 +8,21 @@
 #   Daniel De Guzman:
 #       getJsonObject()
 
-'''
+"""
 This file contains the classes for each archetype of loot card (such as coin rewarding cards) as well as
 the creation of the actual cards in those archetypes
-'''
+"""
 from Coins import CoinStack
 from Cards import *
+
 # from PIL import Image
 from Decks import Deck
 from Dice import *
 from Stack import *
 from JsonOutputHelper import JsonOutputHelper
+
 Json = JsonOutputHelper()
+
 
 # Loot cards that give cents and nothing more
 class Money(Loot):
@@ -34,13 +37,10 @@ class Money(Loot):
 
     def getCount(self):
         return self.count
-    
+
     # Return this object in json structure for GameStates - D.D.
     def getJsonObject(self):
-        lootMoneyObject = {
-            "card": super().getJsonObject(),
-            "count": self.count
-        }
+        lootMoneyObject = {"card": super().getJsonObject(), "count": self.count}
         return lootMoneyObject
 
     # other functions
@@ -84,13 +84,10 @@ class Bomb(Loot):
 
     def getName(self):
         return self.name
-    
+
     # Return this object in json structure for GameStates - D.D.
     def getJsonObject(self):
-        bombLootObject = {
-            "card": super().getJsonObject(),
-            "damage": self.damage
-        }
+        bombLootObject = {"card": super().getJsonObject(), "damage": self.damage}
         return bombLootObject
 
     def use(self, user):
@@ -104,7 +101,7 @@ class Bomb(Loot):
             playerOptions.append(i.getCharacter().getName())
         for i in monsterList:
             playerOptions.append(i[-1].getName())
-        
+
         # this passes and prints data for JSON
         Json = JsonOutputHelper()
         Json.choiceOutput(user.getSocketId(), message, playerOptions)
@@ -112,16 +109,22 @@ class Bomb(Loot):
         target = int(input())
 
         # bomb the selected target
-        if int(target) <= len(playerList): # bomb player
-            message = f"Player {user.getNumber()} played {self.name} and dealt {self.damage} damage to " \
-                      f"Player {room.getPlayers()[int(target) - 1].getNumber()}."
+        if int(target) <= len(playerList):  # bomb player
+            message = (
+                f"Player {user.getNumber()} played {self.name} and dealt {self.damage} damage to "
+                f"Player {room.getPlayers()[int(target) - 1].getNumber()}."
+            )
             Json.systemOutput(message)
             room.getPlayers()[int(target) - 1].takeDamage(self.damage, user)
-        else: # bomb monster
-            message = f"Player {user.getNumber()} played {self.name} and dealt {self.damage} damage " \
-                      f"to {user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][-1].getName()}."
+        else:  # bomb monster
+            message = (
+                f"Player {user.getNumber()} played {self.name} and dealt {self.damage} damage "
+                f"to {user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][-1].getName()}."
+            )
             Json.systemOutput(message)
-            user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][-1].takeDamage(self.damage, user)
+            user.getBoard().getMonsters()[int(target) - 1 - len(playerList)][
+                -1
+            ].takeDamage(self.damage, user)
         user.subtractTapped()
         return
 
@@ -144,14 +147,12 @@ def createBombCards():
 class DiceShard(Loot):
     def __init__(self, name, picture):
         super().__init__(name, picture)
-    
+
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     # dice shard rerolls the most recently played Dice in TheStack
@@ -160,7 +161,9 @@ class DiceShard(Loot):
         stack = room.getStack()
         dice = stack.findDice()
         if isinstance(dice, Dice) == True:
-            message = f"Player {user.getNumber()} played {self.name} and rerolled the dice!"
+            message = (
+                f"Player {user.getNumber()} played {self.name} and rerolled the dice!"
+            )
             Json.systemOutput(message)
             dice.roll()
         user.subtractTapped()
@@ -174,6 +177,7 @@ def createDiceShardCards():
         diceShardDeck.addCardTop(dice_shard)
     return diceShardDeck
 
+
 # recharge an item
 # TODO: putting this off because choosing what item to recharge is complcated and will need to be redone when integrated to website anyways
 class LilBattery(Loot):
@@ -182,11 +186,9 @@ class LilBattery(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -203,17 +205,16 @@ class LilBattery(Loot):
         user.subtractTapped()
         return
 
+
 class MegaBattery(Loot):
     def __init__(self, name, picture):
         super().__init__(name, picture)
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -228,11 +229,13 @@ class MegaBattery(Loot):
         Json.systemOutput(message)
         return
 
+
 def createMegaBatteryCards():
     megaBatteryDeck = Deck([])
     mega_battery = MegaBattery("Mega Battery", "test image.jpg")
     megaBatteryDeck.addCardTop(mega_battery)
     return megaBatteryDeck
+
 
 class PillsYellow(Loot):
     def __init__(self, name, picture):
@@ -240,11 +243,9 @@ class PillsYellow(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -266,17 +267,16 @@ class PillsYellow(Loot):
         user.subtractTapped()
         return
 
+
 class PillsRed(Loot):
     def __init__(self, name, picture):
         super().__init__(name, picture)
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -286,7 +286,9 @@ class PillsRed(Loot):
         if count < 3:
             attack = user.getCharacter().getAttack()
             user.getCharacter().setAttack(attack + 1)
-            message = f"Sick! Player {user.getNumber()} gained 1 attack, till end of turn."
+            message = (
+                f"Sick! Player {user.getNumber()} gained 1 attack, till end of turn."
+            )
             Json.systemOutput(message)
         elif count < 5:
             hp = user.getCharacter().getHp()
@@ -300,17 +302,16 @@ class PillsRed(Loot):
         user.subtractTapped()
         return
 
+
 class PillsBlue(Loot):
     def __init__(self, name, picture):
         super().__init__(name, picture)
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -332,6 +333,7 @@ class PillsBlue(Loot):
         user.subtractTapped()
         return
 
+
 def createPillsCards():
     pillsDeck = Deck([])
     yellow_pill = PillsYellow("Pills! (Y)", "test image.jpg")
@@ -342,6 +344,7 @@ def createPillsCards():
     pillsDeck.addCardTop(blue_pill)
     return pillsDeck
 
+
 # Choose a player, prevent the next 1 damage they would take this turn
 class SoulHeart(Loot):
     def __init__(self, name, picture):
@@ -349,11 +352,9 @@ class SoulHeart(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -367,13 +368,16 @@ class SoulHeart(Loot):
         reduceDamage = ReduceDamage(1)
         character = chosenPlayer.getCharacter()
         character.addInventory(reduceDamage)
+        user.subtractTapped()
         return
+
 
 def createSoulHeartCards():
     soulHeartDeck = Deck([])
     soul_heart = SoulHeart("Soul Heart", "test image.jpg")
     soulHeartDeck.addCardTop(soul_heart)
     return soulHeartDeck
+
 
 # "change the result of a dice roll to a number of your choosing"
 class TheMagician(Loot):
@@ -382,11 +386,9 @@ class TheMagician(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -395,7 +397,9 @@ class TheMagician(Loot):
         dice = stack.findDice()
         if isinstance(dice, Dice) == True:
             message = f"What do you want to change to roll to?"
-            Json.choiceOutput(user.getSocketId(), message, ["1", "2", "3", "4", "5", "6"])
+            Json.choiceOutput(
+                user.getSocketId(), message, ["1", "2", "3", "4", "5", "6"]
+            )
             val = int(input())
             dice.setResult(val)
             message = f"Player {user.getNumber()} played {self.name} and changed the dice roll to a {val}!"
@@ -406,6 +410,7 @@ class TheMagician(Loot):
         user.subtractTapped()
         return
 
+
 # choose a player or monster then roll: deal damage to them equal to the result
 class TheHighPriestess(Loot):
     def __init__(self, name, picture):
@@ -413,11 +418,9 @@ class TheHighPriestess(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -435,6 +438,7 @@ class TheHighPriestess(Loot):
         user.subtractTapped()
         return
 
+
 # Look at the top 5 cards from the Monster Deck, put 1 on top then the rest on the bottom
 class TheEmperor(Loot):
     def __init__(self, name, picture):
@@ -442,11 +446,9 @@ class TheEmperor(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -468,7 +470,9 @@ class TheEmperor(Loot):
             deck.removeCardIndex(0)
         message = f"Player {user.getNumber()} played {self.name} and rearranged the Monster Deck."
         Json.systemOutput(message)
+        user.subtractTapped()
         return
+
 
 # Choose a player or monster, prevent the next instance up to 2 damage they would take this turn
 class TheHierophant(Loot):
@@ -477,11 +481,9 @@ class TheHierophant(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -494,7 +496,9 @@ class TheHierophant(Loot):
         entity.addInventory(reduceDamage)
         message = f"Player {user.getNumber()} played {self.name} to protect {entity.getName()}! :O"
         Json.systemOutput(message)
+        user.subtractTapped()
         return
+
 
 # choose a player they gain 2 hp till end of turn
 class TheLovers(Loot):
@@ -503,11 +507,9 @@ class TheLovers(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -520,6 +522,7 @@ class TheLovers(Loot):
         user.subtractTapped()
         return
 
+
 # choose a player they gain 1 hp and attack till end of turn
 class TheChariot(Loot):
     def __init__(self, name, picture):
@@ -527,11 +530,9 @@ class TheChariot(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -546,6 +547,7 @@ class TheChariot(Loot):
         user.subtractTapped()
         return
 
+
 # choose a player loot and gain cent until you have the same number of each as they do
 class Justice(Loot):
     def __init__(self, name, picture):
@@ -553,11 +555,9 @@ class Justice(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -574,11 +574,14 @@ class Justice(Loot):
         if userLoot < targetLoot:
             diff = targetLoot - userLoot
             user.loot(diff)
-        message = f"Player {user.getNumber()} played {self.name} to increase their hand up to {targetLoot} " \
-                  f"and cents up to {targetCoins}!"
+        message = (
+            f"Player {user.getNumber()} played {self.name} to increase their hand up to {targetLoot} "
+            f"and cents up to {targetCoins}!"
+        )
         Json.systemOutput(message)
         user.subtractTapped()
         return
+
 
 # Look at the top 5 cards from the Treasure Deck, put 1 on top then the rest on the bottom
 class TheHermit(Loot):
@@ -587,11 +590,9 @@ class TheHermit(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -614,7 +615,9 @@ class TheHermit(Loot):
             deck.removeCardIndex(0)
         message = f"Player {user.getNumber()} played {self.name} and rearranged the Treasure Deck!"
         Json.systemOutput(message)
+        user.subtractTapped()
         return
+
 
 # roll --
 class WheelOfFortune(Loot):
@@ -623,11 +626,9 @@ class WheelOfFortune(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -661,6 +662,7 @@ class WheelOfFortune(Loot):
         user.subtractTapped()
         return
 
+
 # choose a player, they gain 1 attack this turn and may attack an additional time this turn
 class Strength(Loot):
     def __init__(self, name, picture):
@@ -668,11 +670,9 @@ class Strength(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -682,11 +682,14 @@ class Strength(Loot):
         attack = target.getAttack()
         target.setAttack(attack + 1)
         target.getCharacter().addAttacksLeft()
-        message = f"Player {user.getNumber()} played {self.name} to give Player {chosenPlayer.getNumber()} +1 ATK and" \
-                  f" an additional attack this turn!"
+        message = (
+            f"Player {user.getNumber()} played {self.name} to give Player {chosenPlayer.getNumber()} +1 ATK and"
+            f" an additional attack this turn!"
+        )
         Json.systemOutput(message)
         user.subtractTapped()
         return
+
 
 # Look at the top card of each deck, you may put them at the bottom of their deck, then loot 2
 class TheHangedMan(Loot):
@@ -695,11 +698,9 @@ class TheHangedMan(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -744,6 +745,7 @@ class TheHangedMan(Loot):
         user.subtractTapped()
         return
 
+
 # kill a player
 class Death(Loot):
     def __init__(self, name, picture):
@@ -751,11 +753,9 @@ class Death(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -768,6 +768,7 @@ class Death(Loot):
         user.subtractTapped()
         return
 
+
 # take 1 damage and gain 4c | take 2 damage and gain 8c
 class Temperance(Loot):
     def __init__(self, name, picture):
@@ -775,18 +776,18 @@ class Temperance(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
         message = "Take 1 or 2 damage for reward?"
         Json.choiceOutput(user.getSocketId(), message, ["1", "2"])
         choice = int(input())
-        message = f"Player {user.getNumber()} took {choice} damage to gain {4*choice} cents."
+        message = (
+            f"Player {user.getNumber()} took {choice} damage to gain {4*choice} cents."
+        )
         Json.systemOutput(message)
         if choice == 1:
             user.takeDamage(1, user)
@@ -797,6 +798,7 @@ class Temperance(Loot):
         user.subtractTapped()
         return
 
+
 # destroy an item you control, if you do, steal a non eternal item from a player or from the shop
 class TheDevil(Loot):
     def __init__(self, name, picture):
@@ -804,11 +806,9 @@ class TheDevil(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -818,11 +818,13 @@ class TheDevil(Loot):
             user.subtractTapped()
             return
         message = "Steal from another player or from the shop?"
-        Json.choiceOutput(user.getSocketId(), message, ["Steal from player", "Steal from shop"])
+        Json.choiceOutput(
+            user.getSocketId(), message, ["Steal from player", "Steal from shop"]
+        )
         choice = int(input())
         items = user.getItems()
         user.chooseDiscardTreasure(user)
-        if choice == 1: # steal from player
+        if choice == 1:  # steal from player
             user.chooseItemSteal()
         else:
             shopItems = user.getBoard().getTreasures()
@@ -838,6 +840,7 @@ class TheDevil(Loot):
         user.subtractTapped()
         return
 
+
 # roll: each player takes 1 damage | each monster takes 1 damage | each player takes 2 damage
 class TheTower(Loot):
     def __init__(self, name, picture):
@@ -845,11 +848,9 @@ class TheTower(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -876,6 +877,7 @@ class TheTower(Loot):
         user.subtractTapped()
         return
 
+
 # gain +1 treasure
 class TheStars(Loot):
     def __init__(self, name, picture):
@@ -883,11 +885,9 @@ class TheStars(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -897,6 +897,7 @@ class TheStars(Loot):
         user.subtractTapped()
         return
 
+
 # Look at the top 5 cards from the Loot Deck, put 1 on top then the rest on the bottom
 class TheMoon(Loot):
     def __init__(self, name, picture):
@@ -904,18 +905,16 @@ class TheMoon(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
         room = user.getRoom()
         deck = user.drawLoot(5)
         # List the top 5 cards
-        message = 'Chose a card to return to the top of the loot deck'
+        message = "Chose a card to return to the top of the loot deck"
         playerOption = []
         for i in deck.getCardList():
             playerOption.append(i.getName())
@@ -933,6 +932,7 @@ class TheMoon(Loot):
         user.subtractTapped()
         return
 
+
 # choose a player who controls the most souls or is tied with the most. that player destroys a soul they control
 class Judgement(Loot):
     def __init__(self, name, picture):
@@ -940,28 +940,26 @@ class Judgement(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
         most = 0
-        mostPlayer = [] # contains the player number of each player with the most souls
+        mostPlayer = []  # contains the player number of each player with the most souls
         players = user.getRoom().getPlayers()
         # find the player with the most souls
         for i in range(len(players)):
             # if player i has the most souls so far
-            if (players[i].getSouls() >= most):
+            if players[i].getSouls() >= most:
                 # if player i has a new record for most souls
                 if most < players[i].getSouls():
                     most = players[i].getSouls()
                     # clear the players with less souls from mostPlayer
                     mostPlayer = []
                     mostPlayer.append(players[i])
-        if most == 0: # no one has any souls
+        if most == 0:  # no one has any souls
             message = f"Player {user.getNumber()} played {self.name}, but no one has any souls..."
             Json.systemOutput(message)
             return
@@ -973,12 +971,13 @@ class Judgement(Loot):
         Json.choiceOutput(user.getSocketId(), message, choiceOptions)
         choice = int(input())
         # remove soul from chosen player
-        chosenPlayer = mostPlayer[choice-1]
+        chosenPlayer = mostPlayer[choice - 1]
         chosenPlayer.subtractSouls(1)
         message = f"Player {user.getNumber()} played {self.name} and forced Player {chosenPlayer.getNumber()} to discard a soul!!"
         Json.systemOutput(message)
         user.subtractTapped()
         return
+
 
 # Look at each player's hand, then loot 2
 class TheWorld(Loot):
@@ -987,18 +986,19 @@ class TheWorld(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
         room = user.getRoom()
         # Shows each player's hand
         for i in range(len(room.getPlayers())):
-            if room.getPlayers()[i].getCharacter().getName() == user.getCharacter().getName():
+            if (
+                room.getPlayers()[i].getCharacter().getName()
+                == user.getCharacter().getName()
+            ):
                 pass  # skip showing player who used this card hands
             else:
                 # show the other players hands
@@ -1008,9 +1008,13 @@ class TheWorld(Loot):
                 Json.systemPrivateOutput(user.getSocketId(), message)
         # after seeing all players hands, loot 2
         user.loot(2)
-        message = f"After seeing everyone's hand, Player {user.getNumber()} looted 2 cards"
+        message = (
+            f"After seeing everyone's hand, Player {user.getNumber()} looted 2 cards"
+        )
         Json.systemOutput(message)
+        user.subtractTapped()
         return
+
 
 def createTarotCards():
     tarotDeck = Deck([])
@@ -1054,6 +1058,7 @@ def createTarotCards():
     tarotDeck.addCardTop(the_world)
     return tarotDeck
 
+
 # put each monster not being attacked into discard and replace each with the top card of the monster deck
 class Ehwaz(Loot):
     def __init__(self, name, picture):
@@ -1061,11 +1066,9 @@ class Ehwaz(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -1082,6 +1085,7 @@ class Ehwaz(Loot):
         user.subtractTapped()
         return
 
+
 # roll for 1 of 6 unique effects
 class BlankRune(Loot):
     def __init__(self, name, picture):
@@ -1089,11 +1093,9 @@ class BlankRune(Loot):
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
@@ -1142,6 +1144,7 @@ class BlankRune(Loot):
         user.subtractTapped()
         return
 
+
 def createRuneCards():
     runeDeck = Deck([])
     ehwaz = Ehwaz("Ehwaz", "test image.jpg")
@@ -1149,6 +1152,7 @@ def createRuneCards():
     blank_rune = BlankRune("Blank Rune", "test image.jpg")
     runeDeck.addCardTop(blank_rune)
     return runeDeck
+
 
 class LostSoul(Loot):
     def __init__(self, name, picture):
@@ -1158,16 +1162,16 @@ class LostSoul(Loot):
         return self.name
 
     def getJsonObject(self):
-        obj = {
-            "card": super().getJsonObject()
-        }
+        obj = {"card": super().getJsonObject()}
         return obj
 
     def use(self, user):
         message = f"Player {user.getNumber()} captures a {self.name}."
         Json.systemOutput(message)
         user.addSouls(1)
+        user.subtractTapped()
         return
+
 
 def createLostSoul():
     myDeck = Deck([])
@@ -1197,5 +1201,33 @@ def createAllLootCards():
     allLoot.combineDeck(lootT)
     allLoot.combineDeck(lootR)
     allLoot.combineDeck(lootL)
-    #allLoot.shuffle()
+    # allLoot.shuffle()
     return allLoot
+
+
+def createHandDemo():
+    myDeck = Deck([])
+    lost_soul = LostSoul("Lost Soul", "test image.jpg")
+    for i in range(4):
+        myDeck.addCardTop(lost_soul)
+    gold_bomb = Bomb("Gold Bomb!!", "test image.jpg", 3)
+    myDeck.addCardTop(gold_bomb)
+    dice_shard = DiceShard("Dice Shard", "test image.jpg")
+    myDeck.addCardTop(dice_shard)
+    soul_heart = SoulHeart("Soul Heart", "test image.jpg")
+    myDeck.addCardTop(soul_heart)
+    the_magician = TheMagician("1. The Magician", "test image.jpg")
+    myDeck.addCardTop(the_magician)
+    justice = Justice("8. Justice", "test image.jpg")
+    myDeck.addCardTop(justice)
+    the_hanged_man = TheHangedMan("12. The Hanged Man", "test image.jpg")
+    myDeck.addCardTop(the_hanged_man)
+    the_devil = TheDevil("15. The Devil", "test image.jpg")
+    myDeck.addCardTop(the_devil)
+    judgement = Judgement("20. Judgement", "test image.jpg")
+    myDeck.addCardTop(judgement)
+    the_world = TheWorld("21. The World", "test image.jpg")
+    myDeck.addCardTop(the_world)
+    ehwaz = Ehwaz("Ehwaz", "test image.jpg")
+    myDeck.addCardTop(ehwaz)
+    return myDeck

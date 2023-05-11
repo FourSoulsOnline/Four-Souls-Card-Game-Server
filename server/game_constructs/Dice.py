@@ -1,11 +1,12 @@
 # Contributors: Jackson Cashman
-'''
+"""
 Simple Dice
 Dice go in TheStack
-'''
+"""
 import random
 from SilverTreasureCards import DiceEffectTreasure
 from JsonOutputHelper import JsonOutputHelper
+
 
 # the code of rollDice is written in other functions, maybe we should replace them with this function call
 def rollDice(user):
@@ -17,13 +18,17 @@ def rollDice(user):
     # use any cards played in response to the added dice before the dice resolves
     while user.getRoom().getStack().getStack()[-1][0] != dice:
         user.getRoom().getStack().useTop(user.getRoom())
-    dice = user.getStack().findDice()  # update dice in case it was tampered with by a responding card
+    dice = (
+        user.getStack().findDice()
+    )  # update dice in case it was tampered with by a responding card
     # take the dice off the stack
     user.getStack().useTop(user.getRoom())
     count = dice.getResult()
     # check for on x dice roll
     globalEffects = user.getBoard().getGlobalEffects()
     for i in range(len(globalEffects)):
+        if (i + 1) > len(globalEffects):
+            pass
         if isinstance(globalEffects[i][0], DiceEffectTreasure):
             # if the necessary result was rolled to use the card
             itemUser = globalEffects[i][1]
@@ -31,6 +36,7 @@ def rollDice(user):
                 itemUser.addToStack(globalEffects[i][0])
                 itemUser.getRoom().useTopStack(itemUser.getNumber())
     return count
+
 
 class Dice:
     def __init__(self):
@@ -44,12 +50,9 @@ class Dice:
 
     def getName(self):
         return self.name
-    
+
     def getJsonObject(self):
-        diceObject = {
-            "name": self.getName(),
-            "result": self.getResult()
-        }
+        diceObject = {"name": self.getName(), "result": self.getResult()}
         return diceObject
 
     # setters
@@ -72,19 +75,28 @@ class Dice:
         elif num < 0:
             num = 0
         self.result = num
+        Json = JsonOutputHelper()
+        Json.diceOutput(self.result)
         return self.result
 
     def incrementUp(self):
         if self.result <= 5:
             self.result += 1
+            Json = JsonOutputHelper()
+            Json.diceOutput(self.result)
             return self.result
         else:
+            Json = JsonOutputHelper()
+            Json.diceOutput(self.result)
             return 6
 
     def incrementDown(self):
         if self.result >= 1:
             self.result -= 1
+            Json = JsonOutputHelper()
+            Json.diceOutput(self.result)
             return self.result
         else:
+            Json = JsonOutputHelper()
+            Json.diceOutput(self.result)
             return 0
-

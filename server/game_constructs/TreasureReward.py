@@ -1,7 +1,8 @@
 # Contributors: Jackson Cashman
-'''
+"""
 Rewards from Enemies & etc to "Gain X Treasure"
-'''
+"""
+
 
 # count is the amount of Treasure the Player will gain
 class TreasureReward:
@@ -10,10 +11,7 @@ class TreasureReward:
 
     def getCount(self):
         return self.count
-    
+
     def getJsonObject(self):
-        treasureRewardObject = {
-            "name": "TreasureRewardObject",
-            "count": self.count
-        }
+        treasureRewardObject = {"name": "TreasureRewardObject", "count": self.count}
         return treasureRewardObject

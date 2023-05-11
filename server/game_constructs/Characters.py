@@ -8,22 +8,25 @@ from Decks import Deck
 from Effects import *
 from JsonOutputHelper import JsonOutputHelper
 from Dice import Dice
+
 Json = JsonOutputHelper()
+
 
 def createCharacterCards():
     # characters from the base game
     # name, image, health, attack, maxAttack
-    isaac = Character("Isaac",                  "test image.jpg", 2, 1, 1)
-    maggy = Character("Maggy",                  "test image.jpg", 2, 1, 1)
-    cain = Character("Cain",                    "test image.jpg", 2, 1, 1)
-    judas = Character("Judas",                  "test image.jpg", 2, 1, 1)
-    blue_baby = Character("Blue Baby",          "test image.jpg", 2, 1, 1)
-    eve = Character("Eve",                      "test image.jpg", 2, 1, 1)
-    samson = Character("Samson",                "test image.jpg", 2, 1, 1)
+    isaac = Character("Isaac", "test image.jpg", 2, 1, 1)
+    maggy = Character("Maggy", "test image.jpg", 2, 1, 1)
+    cain = Character("Cain", "test image.jpg", 2, 1, 1)
+    judas = Character("Judas", "test image.jpg", 2, 1, 1)
+    blue_baby = Character("Blue Baby", "test image.jpg", 2, 1, 1)
+    eve = Character("Eve", "test image.jpg", 2, 1, 1)
+    samson = Character("Samson", "test image.jpg", 2, 1, 1)
     # lazarus = Character("Lazarus",              "test image.jpg", 2, 1, 1)
-    lilith = Character("Lilith",                "test image.jpg", 2, 1, 1)
-    the_forgotten = Character("The Forgotten",  "test image.jpg", 2, 1, 1)
+    lilith = Character("Lilith", "test image.jpg", 2, 1, 1)
+    the_forgotten = Character("The Forgotten", "test image.jpg", 2, 1, 1)
     # eden = Character("Eden",                    "test image.jpg", 2, 1, 1)
+
 
 def createCharactersWithNoItems():
     characterDeck = Deck([])
@@ -51,6 +54,8 @@ def createCharactersWithNoItems():
     # characterDeck.addCardTop(eden)
     return characterDeck
 
+
+# Re-roll a die roll, end of player's turn recharge this
 class D6(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -65,6 +70,7 @@ class D6(GoldTreasure):
         dice = stack.findDice()
         # was getting error when playing D6, that Dice is not imported.
         from Dice import Dice
+
         if isinstance(dice, Dice) == True:
             dice.roll()
             message = f"the dice has been re-rolled to {dice.getResult()}"
@@ -75,6 +81,8 @@ class D6(GoldTreasure):
             Json.systemOutput(message)
         return
 
+
+# Choose a player or monster, prevent the next instance of damage they would take, end of player's turn recharge this
 class YumHeart(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -93,6 +101,8 @@ class YumHeart(GoldTreasure):
         self.tapped = True
         return
 
+
+# Look at top 5 cards of the deck, put them back in any order
 class SleightOfHand(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -125,8 +135,9 @@ class SleightOfHand(GoldTreasure):
         self.tapped = True
         return
 
-class BookOfBelial(GoldTreasure):
 
+# add or subtract 1 from a roll, end of player's turn recharge this
+class BookOfBelial(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
         self.eternal = True
@@ -156,6 +167,9 @@ class BookOfBelial(GoldTreasure):
             Json.systemOutput(message)
         return
 
+
+# choose one, steal 1 cent from a player, look at top card of a deck, discard a lott card then loot 1. Recharge this
+# each time you take damage
 class ForeverAlone(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -165,7 +179,11 @@ class ForeverAlone(GoldTreasure):
 
     def use(self, user):
         message = "Choose to steal a coin from a player, look at the top card of a deck, discard a loot card then loot 1"
-        Json.choiceOutput(user.getSocketId(), message, ["Steal a coin", "Look at a deck", "Discard and Loot"])
+        Json.choiceOutput(
+            user.getSocketId(),
+            message,
+            ["Steal a coin", "Look at a deck", "Discard and Loot"],
+        )
         choice = int(input())
         room = user.getRoom()
         # option 1 steal a coin from a player
@@ -186,7 +204,9 @@ class ForeverAlone(GoldTreasure):
         # option 2 look at top card of a deck
         elif choice == 2:
             message = "Choose a deck to look at, Loot, Monster, or Treasure"
-            Json.choiceOutput(user.getSocketId(), message, ["Loot", "Monster", "Treasure"])
+            Json.choiceOutput(
+                user.getSocketId(), message, ["Loot", "Monster", "Treasure"]
+            )
             deckChoice = int(input())
             # look at top card from deck they choose
             if deckChoice == 1:
@@ -217,8 +237,12 @@ class ForeverAlone(GoldTreasure):
             user.loot(1)
         self.tapped = True
         return
+
     # somehow how to make this item recharged each time the player takes damage
 
+
+# Passive: At start of your turn put top card of a deck into discard. Use: Put the top card of a discard on top of its
+# deck
 class TheCurse(GoldTreasure):
     # need to implement start of turn effect (put top card of a deck into discard)
     def __init__(self, name, picture, eternal):
@@ -241,7 +265,9 @@ class TheCurse(GoldTreasure):
             else:
                 message = "The top card from the discard loot deck was put on top of the loot deck"
                 Json.systemOutput(message)
-                room.getBoard().getLootDeck().addCardTop(room.getBoard().getDiscardLootDeck().deal())
+                room.getBoard().getLootDeck().addCardTop(
+                    room.getBoard().getDiscardLootDeck().deal()
+                )
         elif choice == 2:
             if room.getBoard().getDiscardMonsterDeck().getDeckLength() == 0:
                 message = "The Monster discard deck is empty"
@@ -249,7 +275,9 @@ class TheCurse(GoldTreasure):
             else:
                 message = "The top card from the discard monster deck was put on top of the monster deck"
                 Json.systemOutput(message)
-                room.getBoard().getMonsterDeck().addCardTop(room.getBoard().getDiscardMonsterDeck().deal())
+                room.getBoard().getMonsterDeck().addCardTop(
+                    room.getBoard().getDiscardMonsterDeck().deal()
+                )
         elif choice == 3:
             if room.getBoard().getDiscardTreasureDeck().getDeckLength() == 0:
                 message = "The Treasure discard deck is empty"
@@ -257,10 +285,14 @@ class TheCurse(GoldTreasure):
             else:
                 message = "The top card from the discard treasure deck was put on top of the treasure deck"
                 Json.systemOutput(message)
-                room.getBoard().getTreasureDeck().addCardTop(room.getBoard().getDiscardTreasureDeck().deal())
+                room.getBoard().getTreasureDeck().addCardTop(
+                    room.getBoard().getDiscardTreasureDeck().deal()
+                )
         self.tapped = True
         return
 
+
+# Choose a player or monster, they gain +1 attack till end of turn, end of player's turn recharge this
 class BloodLust(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -278,6 +310,8 @@ class BloodLust(GoldTreasure):
         self.tapped = True
         return
 
+
+# After paying death penalties, gain +1 treasure
 class LazarusRags(SilverTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -289,6 +323,9 @@ class LazarusRags(SilverTreasure):
         # when this character dies after penalties gain 1 treasure
         return
 
+
+# Choose one, look at a player's hand then may swap card from user's and player's hand
+# loot 1 then put card from your hand on top of loot deck
 class Incubus(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -316,7 +353,10 @@ class Incubus(GoldTreasure):
             cardChoice = int(input())
             # If they choose to cancel do nothing
             if cardChoice == playerChoice.getHand().getDeckLength() + 1:
-                print("Canceling...")
+                Json.systemPrivateOutput(
+                    user.getSocketId(), f"Canceling {self.name}..."
+                )
+                # print("Canceling...")
                 return
             else:
                 playerCard = playerChoice.getHand().getCard(cardChoice - 1)
@@ -347,6 +387,11 @@ class Incubus(GoldTreasure):
         self.tapped = True
         return
 
+
+# choose to put 1 counter
+# remove 1 counter, add 1 to a roll
+# remove 2 counters, deal 1 damage to monster or player
+# remove 5 counters, this becomes a soul and loses all abilities
 class TheBone(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -356,9 +401,20 @@ class TheBone(GoldTreasure):
         self.counter = 0
 
     def use(self, user):
-        message = "Choose to put a counter, to remove 1 counter and add 1 to dice roll, to remove 2 counters and deal 1 " \
-                  "damage to a monster or player, remove 5 counters and this card becomes a soul but loses all abilities"
-        Json.choiceOutput(user.getSocketId(), message, ["+1 Counter", "-1 Add 1 dice roll", "-2 Deal 1 damage to Entity", "-5 Gain a soul"])
+        message = (
+            "Choose to put a counter, to remove 1 counter and add 1 to dice roll, to remove 2 counters and deal 1 "
+            "damage to a monster or player, remove 5 counters and this card becomes a soul but loses all abilities"
+        )
+        Json.choiceOutput(
+            user.getSocketId(),
+            message,
+            [
+                "+1 Counter",
+                "-1 Add 1 dice roll",
+                "-2 Deal 1 damage to Entity",
+                "-5 Gain a soul",
+            ],
+        )
         choice = int(input())
         # option 1 put a counter on this
         if choice == 1:
@@ -407,6 +463,7 @@ class TheBone(GoldTreasure):
         Json.systemOutput(message)
         return
 
+
 class EdenStartingCard(GoldTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
@@ -419,9 +476,10 @@ class EdenStartingCard(GoldTreasure):
         self.tapped = True
         return
 
+
 def createAllStartingItems():
     startingDeck = Deck([])
-    startingDeck.addCardBottom(D6("The D6", "test.jpg", True))
+    startingDeck.addCardBottom(D6("D6", "test.jpg", True))
     startingDeck.addCardBottom(YumHeart("Yum Heart", "test.jpg", True))
     startingDeck.addCardBottom(SleightOfHand("Sleight Of Hand", "test.jpg", True))
     startingDeck.addCardBottom(BookOfBelial("Book Of Belial", "test.jpg", True))

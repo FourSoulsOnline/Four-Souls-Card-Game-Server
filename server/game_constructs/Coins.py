@@ -5,12 +5,9 @@ class CoinStack:
 
     def getCount(self):
         return self.count
-    
+
     def getJsonObject(self):
-        coinStackObject = {
-            "name": "CoinStack",
-            "count": self.count
-        }
+        coinStackObject = {"name": "CoinStack", "count": self.count}
         return coinStackObject
 
     # adds the coins from CoinStack c2 into self.count
@@ -18,14 +15,12 @@ class CoinStack:
         self.count += c2.count
         return
 
+
 # logic for coinX is in die effect
 class CoinXReward:
     def __init__(self):
         return
-    
-    def getJsonObject(self):
-        coinXRewardObject = {
-            "name": "CoinXReward"
-        }
-        return coinXRewardObject
 
+    def getJsonObject(self):
+        coinXRewardObject = {"name": "CoinXReward"}
+        return coinXRewardObject

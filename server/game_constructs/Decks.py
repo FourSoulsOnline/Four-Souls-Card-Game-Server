@@ -1,10 +1,11 @@
 # Contributors: Jackson Cashman
 # Contributors: Daniel De Guzman - getJsonObject()
-'''
+"""
 File defining the deck class
-'''
+"""
 import random
 from Cards import *
+
 
 class Deck:
     def __init__(self, cardList):
@@ -14,7 +15,7 @@ class Deck:
 
     # print the name of each card in the deck from index 0 --> -1
     def printCardListNames(self):
-        #for i in range(len(self.cardList)):
+        # for i in range(len(self.cardList)):
         #    print(f"{i+1}: {self.cardList[i].getName()}")
         return
 
@@ -35,7 +36,7 @@ class Deck:
         for c in self.cardList:
             if c.getName() == name:
                 return c
-    
+
     def getJsonObject(self):
         if len(self.cardList) == 0:
             return []
@@ -44,7 +45,7 @@ class Deck:
             for i in range(len(self.cardList)):
                 cardsJsonObjects.append(self.cardList[i].getJsonObject())
             return cardsJsonObjects
-    
+
     def getCardNamesAsJson(self):
         if len(self.cardList) == 0:
             return []
@@ -98,4 +99,3 @@ class Deck:
                 removed = c
                 self.cardList.remove(removed)
         return removed
-

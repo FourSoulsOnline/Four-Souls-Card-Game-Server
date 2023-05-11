@@ -3,11 +3,11 @@
 #       All files
 #   Ethan Sandoval:
 #       __init__, findDice
-'''
+"""
 Stack is an attribute of Room
 Dice, Treasure, Loot, Attack Declarations, and Declarations to buy Treasure go in TheStack
 Anything that can go in TheStack MUST have a use() function
-'''
+"""
 import sys
 import time
 import json
@@ -20,6 +20,7 @@ from JsonOutputHelper import JsonOutputHelper
 # TODO: i dont think that players are given an opportunity to react to a card further down the stack
 #       after the card above it resolves
 
+
 class TheStack:
     def __init__(self):
         self.stack = []
@@ -29,8 +30,8 @@ class TheStack:
     # getters
 
     def getStackElements(self):
-        #length = len(self.stack)
-        #for i in range(length):
+        # length = len(self.stack)
+        # for i in range(length):
         #    print(self.stack[length - (i + 1)][0].getName())
         return
 
@@ -39,12 +40,9 @@ class TheStack:
 
     def getLastResolved(self):
         return self.lastResolved
-    
+
     def getJsonObject(self):
-        stackObject = {
-            "stack": self.stack,
-            "lastResolved": self.lastResolved
-        }
+        stackObject = {"stack": self.stack, "lastResolved": self.lastResolved}
         return stackObject
 
     def setLastResolved(self, lis):
@@ -84,7 +82,7 @@ class TheStack:
             for player in playerList:
                 Json.playerHandOutput(player)
                 Json.playerBoardOutput(player)
-            
+
             try:
                 self.lastResolved = self.stack.pop(-1)
                 # STACK JSON - completed
@@ -100,7 +98,7 @@ class TheStack:
             except:
                 return
             self.lastResolved[0].use(self.lastResolved[1])
-            
+
             # STACK JSON - completed
             Json = JsonOutputHelper()
             Json.stackOutput(self)
@@ -110,10 +108,10 @@ class TheStack:
             for player in playerList:
                 Json.playerHandOutput(player)
                 Json.playerBoardOutput(player)
-            
+
         return
 
-    '''
+    """
     Here lies the first version of use stack
     # use the latest element of the stack
     def useTop(self):
@@ -125,7 +123,7 @@ class TheStack:
         except:
             return
         return
-    '''
+    """
 
     # return the most recently played Dice in TheStack
     def findDice(self):
@@ -133,7 +131,7 @@ class TheStack:
         for i in range(len(self.stack)):
             if isinstance(self.stack[length - i - 1][0], Dice) == True:
                 return self.stack[(length - i - 1)][0]
-        return -1   # -1 would be not found
+        return -1  # -1 would be not found
         # TODO: might raise an error?^
 
     # Print the stack content for JSON/frontend communication - D.D.
@@ -145,30 +143,28 @@ class TheStack:
                 stackObject = {
                     "type": "Card",
                     "player": self.stack[i][1].getName(),
-                    "obj": self.stack[i][0].getName()
+                    "obj": self.stack[i][0].getName(),
                 }
             # if the stack object is a Dice
             elif isinstance(self.stack[i][0], Dice):
                 stackObject = {
                     "type": self.stack[i][0].getName(),
                     "player": self.stack[i][1].getName(),
-                    "obj": self.stack[i][0].getResult()
+                    "obj": self.stack[i][0].getResult(),
                 }
             # if the stack object is a Declared Attack
             elif isinstance(self.stack[i][0], DeclaredAttack):
                 stackObject = {
                     "type": self.stack[i][0].getName(),
                     "player": self.stack[i][1].getName(),
-                    "obj": self.stack[i][0].getMonster().getName()
+                    "obj": self.stack[i][0].getMonster().getName(),
                 }
             # otherwise the stack object is a declared purchase/mystery purchase
             else:
                 stackObject = {
                     "type": "Declared Purchase",
                     "player": self.stack[i][1].getName(),
-                    "obj": self.stack[i][0].getTreasure().getName()
+                    "obj": self.stack[i][0].getTreasure().getName(),
                 }
             stackContent.append(stackObject)
-        return(stackContent)
-            
-
+        return stackContent

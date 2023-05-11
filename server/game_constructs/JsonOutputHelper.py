@@ -5,9 +5,11 @@ import sys
 import json
 import time
 
+
 class JsonOutputHelper:
     # Timer Value to let gameserver.js parse the message.
     timer = 1
+
     def __init__(self):
         pass
 
@@ -16,7 +18,7 @@ class JsonOutputHelper:
         print(json.dumps(jsonMessage))
         sys.stdout.flush()
         time.sleep(self.timer)
-    
+
     # Handle choices message, where choices is array of strings.
     def choiceOutput(self, playerSocket, choiceMessage, choices):
         # choices should always be an array of strings
@@ -24,16 +26,13 @@ class JsonOutputHelper:
             "messageFlag": "CHOICE",
             "socketID": playerSocket,
             "choiceMessage": choiceMessage,
-            "choices": choices
+            "choices": choices,
         }
         self.printOutput(choiceMessage)
 
     # Handle system output.
     def systemOutput(self, message):
-        systemMessage = {
-            "messageFlag": "SYSTEM",
-            "systemMessage": message
-        }
+        systemMessage = {"messageFlag": "SYSTEM", "systemMessage": message}
         self.printOutput(systemMessage)
 
     # Handle a system output to a specific Player
@@ -41,7 +40,7 @@ class JsonOutputHelper:
         systemPrivateMessage = {
             "messageFlag": "SYSTEM-PRIVATE",
             "socketID": socketId,
-            "systemMessage": message
+            "systemMessage": message,
         }
         self.printOutput(systemPrivateMessage)
 
@@ -51,7 +50,7 @@ class JsonOutputHelper:
         playerObject = {
             "messageFlag": "PLAYER-HAND",
             "socketID": player.getSocketId(),
-            "hand": player.getHand().getCardNamesAsJson()
+            "hand": player.getHand().getCardNamesAsJson(),
         }
         self.printOutput(playerObject)
 
@@ -65,7 +64,7 @@ class JsonOutputHelper:
             "cardCount": player.getHand().getDeckLength(),
             "coins": player.getCoins(),
             "souls": player.getSouls(),
-            "items": player.getItems().getJsonObject()
+            "items": player.getItems().getJsonObject(),
         }
         self.printOutput(playerObject)
 
@@ -75,18 +74,12 @@ class JsonOutputHelper:
         activeTreasureNames = []
         for i in range(len(treasuresBoardObject)):
             activeTreasureNames.append(treasuresBoardObject[i][0].getName())
-        treasureOutput = {
-            "messageFlag": "TREASURE",
-            "treasures": activeTreasureNames
-        }
+        treasureOutput = {"messageFlag": "TREASURE", "treasures": activeTreasureNames}
         self.printOutput(treasureOutput)
 
     # Handle the Dice output
     def diceOutput(self, result):
-        diceObject = {
-            "messageFlag": "DICE",
-            "result": result
-        }
+        diceObject = {"messageFlag": "DICE", "result": result}
         self.printOutput(diceObject)
 
     # Handle the monster section output
@@ -99,26 +92,24 @@ class JsonOutputHelper:
             # don't need to render empty json slots.
             from Events import Event
             from Enemies import Enemy
+
             if len(activeMonsters[j]) > 0:
                 if isinstance(activeMonsters[j][0], Event):
                     monster = {
                         "cardName": activeMonsters[j][0].getName(),
                         "hp": 0,
                         "attack": 0,
-                        "diceValue": 0
+                        "diceValue": 0,
                     }
                 elif isinstance(activeMonsters[j][0], Enemy):
                     monster = {
                         "cardName": activeMonsters[j][0].getName(),
                         "hp": activeMonsters[j][0].getHp(),
                         "attack": activeMonsters[j][0].getAttack(),
-                        "diceValue": activeMonsters[j][0].getDiceValue()
+                        "diceValue": activeMonsters[j][0].getDiceValue(),
                     }
                 activeMonsterList.append(monster)
-        monsterObject = {
-            "messageFlag": "MONSTER",
-            "monsters": activeMonsterList
-        }
+        monsterObject = {"messageFlag": "MONSTER", "monsters": activeMonsterList}
         self.printOutput(monsterObject)
 
     # Handle the Discard Loot Deck output
@@ -126,7 +117,7 @@ class JsonOutputHelper:
     def discardLootDeckOutput(self, discardLoot):
         discardObject = {
             "messageFlag": "DISCARD-LOOT",
-            "cards": discardLoot.getCardNamesAsJson()
+            "cards": discardLoot.getCardNamesAsJson(),
         }
         self.printOutput(discardObject)
 
@@ -135,7 +126,7 @@ class JsonOutputHelper:
     def discardTreasureDeckOutput(self, discardTreasure):
         discardObject = {
             "messageFlag": "DISCARD-TREASURE",
-            "cards": discardTreasure.getCardNamesAsJson()
+            "cards": discardTreasure.getCardNamesAsJson(),
         }
         self.printOutput(discardObject)
 
@@ -144,15 +135,20 @@ class JsonOutputHelper:
     def discardMonsterDeckOutput(self, discardMonster):
         discardObject = {
             "messageFlag": "DISCARD-MONSTER",
-            "cards": discardMonster.getCardNamesAsJson()
+            "cards": discardMonster.getCardNamesAsJson(),
         }
         self.printOutput(discardObject)
 
     # Handle stack output.
     # stack is the stack.
     def stackOutput(self, stack):
-        stackContent = {
-            "messageFlag": "STACK",
-            "content": stack.getStackContentJson()
-        }
+        stackContent = {"messageFlag": "STACK", "content": stack.getStackContentJson()}
         self.printOutput(stackContent)
+
+    def winOutput(self, player):
+        winObject = {
+            "messageFlag": "WINNER",
+            "winnerUsername": player.getUsername(),
+            "winnerCharacter": player.getCharacter().getName(),
+        }
+        self.printOutput(winObject)

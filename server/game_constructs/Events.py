@@ -1,14 +1,16 @@
-'''
+"""
 Event cards that can be found in the Monster deck
 Events dont work correctly if they are on the board before the first players turn starts
 (not an issue since the deck should be shuffled in that case anyways)
-'''
+"""
 
 from Cards import Event
-#from Dice import rollDice
+from Dice import rollDice
 from Decks import Deck
 from JsonOutputHelper import JsonOutputHelper
+
 Json = JsonOutputHelper()
+
 
 # the active player must attack the monster deck 2 times this turn
 # TODO: force this to target the unknown top monster
@@ -26,6 +28,7 @@ class Ambush(Event):
         self.resolve(activePlayer)
         return
 
+
 class ChestMoney(Event):
     def __init__(self, name, picture):
         super().__init__(name, picture)
@@ -39,7 +42,9 @@ class ChestMoney(Event):
             Json.systemOutput(message)
             activePlayer.addCoins(1)
         elif count < 5:
-            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds 3c."
+            message = (
+                f"Player {activePlayer.getNumber()} opens {self.name} and finds 3c."
+            )
             Json.systemOutput(message)
             activePlayer.addCoins(3)
         else:
@@ -48,6 +53,7 @@ class ChestMoney(Event):
             activePlayer.addCoins(6)
         self.resolve(activePlayer)
         return
+
 
 class ChestLoot(Event):
     def __init__(self, name, picture):
@@ -72,6 +78,7 @@ class ChestLoot(Event):
         self.resolve(activePlayer)
         return
 
+
 class DarkChest1(Event):
     def __init__(self, name, picture):
         super().__init__(name, picture)
@@ -85,7 +92,9 @@ class DarkChest1(Event):
             Json.systemOutput(message)
             activePlayer.loot(1)
         elif count < 5:
-            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds 3c."
+            message = (
+                f"Player {activePlayer.getNumber()} opens {self.name} and finds 3c."
+            )
             Json.systemOutput(message)
             activePlayer.addCoins(3)
         else:
@@ -94,6 +103,7 @@ class DarkChest1(Event):
             activePlayer.takeDamage(2, activePlayer)
         self.resolve(activePlayer)
         return
+
 
 class DarkChest2(Event):
     def __init__(self, name, picture):
@@ -108,7 +118,9 @@ class DarkChest2(Event):
             Json.systemOutput(message)
             activePlayer.addCoins(1)
         elif count < 5:
-            message = f"Player {activePlayer.getNumber()} opens {self.name} and finds 2 loot."
+            message = (
+                f"Player {activePlayer.getNumber()} opens {self.name} and finds 2 loot."
+            )
             Json.systemOutput(message)
             activePlayer.loot(2)
         else:
@@ -117,6 +129,7 @@ class DarkChest2(Event):
             activePlayer.takeDamage(2, activePlayer)
         self.resolve(activePlayer)
         return
+
 
 class GoldChestLoot(Event):
     def __init__(self, name, picture):
@@ -141,6 +154,7 @@ class GoldChestLoot(Event):
         self.resolve(activePlayer)
         return
 
+
 class GoldChestMoney(Event):
     def __init__(self, name, picture):
         super().__init__(name, picture)
@@ -163,6 +177,7 @@ class GoldChestMoney(Event):
             activePlayer.addCoins(7)
         self.resolve(activePlayer)
         return
+
 
 # choose a player with the most c or tied for the most. that player loses all their c
 class Greed(Event):
@@ -205,10 +220,11 @@ class Greed(Event):
             Json.choiceOutput(activePlayer.getSocketId(), message, playerOption)
             # then look for input from button press
             playerChoice = int(input())
-            chosenPlayer = richest[playerChoice-1]
+            chosenPlayer = richest[playerChoice - 1]
             chosenPlayer.setCoins(0)
         self.resolve(activePlayer)
         return
+
 
 # each player takes 2 damage
 class MegaTrollBomb(Event):
@@ -225,6 +241,7 @@ class MegaTrollBomb(Event):
             players[i].takeDamage(2, players[i])
         self.resolve(activePlayer)
         return
+
 
 class SecretRoom(Event):
     def __init__(self, name, picture):
@@ -255,6 +272,7 @@ class SecretRoom(Event):
         self.resolve(activePlayer)
         return
 
+
 # expand treasure slots by 2. the active player may attack again this turn
 class ShopUpgrade(Event):
     def __init__(self, name, picture):
@@ -272,6 +290,7 @@ class ShopUpgrade(Event):
         self.resolve(activePlayer)
         return
 
+
 # the active player takes 2 damage
 class TrollBombs(Event):
     def __init__(self, name, picture):
@@ -285,6 +304,7 @@ class TrollBombs(Event):
         activePlayer.takeDamage(2, activePlayer)
         self.resolve(activePlayer)
         return
+
 
 # expand monster slots by 1. the active player may attack again this turn
 class XlFloor(Event):
@@ -301,6 +321,7 @@ class XlFloor(Event):
         Json.systemOutput(message)
         self.resolve(activePlayer)
         return
+
 
 def createEventCards():
     eventDeck = Deck([])

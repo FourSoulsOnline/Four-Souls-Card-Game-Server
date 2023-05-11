@@ -6,6 +6,7 @@ import json
 import ast
 from Stack import TheStack
 from Dice import Dice
+
 # from Decks import Deck
 from LootCards import createAllLootCards
 from Enemies import createAllEnemies, createAdditionalEnemeies
@@ -49,10 +50,17 @@ myRoom = Room(myStack, myBoard)
 inputFromServer = ast.literal_eval(sys.argv[1])
 # Construct players based on number of players in socket.io room - D.D.
 players = []
-for i in range(len(inputFromServer['players'])):
-    player = Player(characters.deal(), i+1, myRoom, inputFromServer['players'][i]['socketID'], inputFromServer['players'][i]['username'])
-    for i in range(3):
+for i in range(len(inputFromServer["players"])):
+    player = Player(
+        characters.deal(),
+        i + 1,
+        myRoom,
+        inputFromServer["players"][i]["socketID"],
+        inputFromServer["players"][i]["username"],
+    )
+    for j in range(3):
         player.getHand().addCardTop(myRoom.getBoard().getLootDeck().deal())
+    player.gainTreasure(2)
     players.append(player)
     myRoom.addPlayer(player)
 
@@ -60,13 +68,10 @@ playerCharacterAndUsernames = []
 for player in players:
     obj = {
         "character": player.getCharacter().getName(),
-        "username": player.getUsername()
+        "username": player.getUsername(),
     }
     playerCharacterAndUsernames.append(obj)
-playersList = {
-    "messageFlag": "PLAYER-LIST",
-    "playersList": playerCharacterAndUsernames
-}
+playersList = {"messageFlag": "PLAYER-LIST", "playersList": playerCharacterAndUsernames}
 print(json.dumps(playersList))
 time.sleep(1)
 sys.stdout.flush()
@@ -75,11 +80,10 @@ sys.stdout.flush()
 for player in players:
     Json.playerBoardOutput(player)
     Json.playerHandOutput(player)
-time.sleep(1)
 
 myDice = Dice()
 myDice.roll()
 
-time.sleep(3)
+
 # Start the game...
 myBoard.startTurn(myRoom.getPlayers()[0])

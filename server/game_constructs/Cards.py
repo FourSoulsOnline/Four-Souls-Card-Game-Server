@@ -1,23 +1,26 @@
 # Contributors: Jackson Cashman
 # Contributor: Daniel De Guzman - getJsonObject()
-'''
+"""
 This file contains the class definitions for all card types and interfaces
 Classes for more specific cards (such as functional Loot cards) are in their individual python files
-'''
+"""
 import json
 from Coins import CoinStack
 from TreasureReward import TreasureReward
-#from Dice import Dice
+
+# from Dice import Dice
 from DeclareAttack import DeclaredAttack
 from Effects import *
 from JsonOutputHelper import JsonOutputHelper
+
 Json = JsonOutputHelper()
-'''
+"""
 # this assigns a picture to an Image obj and then opens it
 # images should be defined using Image.open() and then passed into the init for Card (i think)
 myImage = Image.open("test image.jpg")
 myImage.show()
-'''
+"""
+
 
 # Card is the parent class of all classes in this file
 # name: string
@@ -29,17 +32,16 @@ class Card:
 
     def getName(self):
         return self.name
+
     def getPicture(self):
         return self.picture
-    
+
     # returns the JSON object for the class - D.D.
     # used for frontend rendering/gamestates - D.D.
     def getJsonObject(self):
-        cardObject = {
-            "name": self.name,
-            "picture": self.picture
-        }
+        cardObject = {"name": self.name, "picture": self.picture}
         return cardObject
+
 
 # Card child class for Entity
 # maxHp: int
@@ -52,7 +54,9 @@ class Entity(Card):
         self.hp = maxHp
         self.attack = attack
         self.maxAttack = attack
-        self.inventory = [] # this can be used to keep track of buffs that last toll end of turn, may change later
+        self.inventory = (
+            []
+        )  # this can be used to keep track of buffs that last toll end of turn, may change later
 
     # getters
 
@@ -67,10 +71,10 @@ class Entity(Card):
 
     def getMaxAttack(self):
         return self.maxAttack
-    
+
     def getInventory(self):
         return self.inventory
-    
+
     def getJsonObject(self):
         entityObject = {
             "card": super().getJsonObject(),
@@ -85,7 +89,7 @@ class Entity(Card):
 
     # setters
 
-    def setMaxHp(self, num): # i dont think this will ever be used
+    def setMaxHp(self, num):  # i dont think this will ever be used
         self.maxHp = num
         return
 
@@ -114,7 +118,7 @@ class Entity(Card):
         return
 
     def clearEffect(self, index):
-        #self.inventory.remove()
+        # self.inventory.remove()
         self.inventory.pop(index)
         return
 
@@ -155,6 +159,9 @@ class Entity(Card):
             # death
             if isinstance(self, Enemy):
                 self.die(attacker)
+        if isinstance(self, Enemy):
+            activeMonsters = attacker.getRoom().getBoard().getMonsters()
+            Json.monsterOutput(activeMonsters)
         return
 
 
@@ -169,16 +176,16 @@ class Character(Entity):
         self.maxAttack = attack
         # range from 0-2. 2 means it is your turn and can play both your free and 'tapped' loot play
         # gets reduced to 1 at the end of your turn
-        #self.tapped = 0
-        self.tapped = 1 # TODO: this should be 0 but is set to 1 for testing purposes
+        # self.tapped = 0
+        self.tapped = 1  # TODO: this should be 0 but is set to 1 for testing purposes
         self.attacksLeft = 0
         self.purchases = 0
-        self.mandatoryAttacks = 0 # the number of times the character must attack again this turn
+        self.mandatoryAttacks = (
+            0  # the number of times the character must attack again this turn
+        )
         self.mandatoryDeckAttacks = 0  # the number of times the character must attack the unknown monster slot this turn
 
     # getters
-
-
 
     def getTapped(self):
         return self.tapped
@@ -188,7 +195,7 @@ class Character(Entity):
 
     def getAttacksLeft(self):
         return self.attacksLeft
-    
+
     def getJsonObject(self):
         characterObject = {
             "entity": super().getJsonObject(),
@@ -198,7 +205,6 @@ class Character(Entity):
             "mandatoryAttacks": self.mandatoryAttacks,
         }
         return characterObject
-
 
     def getMandatoryAttacks(self):
         return self.mandatoryAttacks
@@ -296,7 +302,7 @@ class Enemy(Entity, Monster):
 
     def getReward(self):
         return self.reward
-    
+
     def getJsonObject(self):
         enemyObject = {
             "entity": super().getJsonObject(),
@@ -304,7 +310,6 @@ class Enemy(Entity, Monster):
             "soulCount": self.soulCount,
         }
         return enemyObject
-    
 
     # setters
 
@@ -312,11 +317,13 @@ class Enemy(Entity, Monster):
         self.diceValue = num
         return
 
-    def setSoulCount(self, num): # not sure if this will ever have any use
+    def setSoulCount(self, num):  # not sure if this will ever have any use
         self.soulCount = num
         return
 
-    def setReward(self, lis): # adding a function to add rewards to an existing reward might be easier once cards are implemented
+    def setReward(
+        self, lis
+    ):  # adding a function to add rewards to an existing reward might be easier once cards are implemented
         self.reward = lis
         return
 
@@ -338,6 +345,7 @@ class Enemy(Entity, Monster):
         activePlayer = player.getRoom().getActivePlayer()
         # claim rewards
         from LootReward import LootReward
+
         for i in range(len(self.getReward())):
             # award Coin rewards
             if isinstance(self.getReward()[i], CoinStack):
@@ -381,6 +389,7 @@ class Enemy(Entity, Monster):
     # basic enemies have no die effect
     def dieEffect(self, player):
         return
+
 
 # Event child class of Monster(Card)
 # There will be many child classes from this class for each kind of Event
@@ -435,16 +444,14 @@ class Treasure(Card):
 
     # getJsonObject for GameState - D.D.
     def getJsonObject(self):
-        treasureObject = {
-            "card": super().getJsonObject(),
-            "eternal": self.eternal
-        }
+        treasureObject = {"card": super().getJsonObject(), "eternal": self.eternal}
         # Built in python function to check if an object has an attribute.
-        if hasattr(self, 'tapped'):
-            treasureObject['tapped'] = self.tapped
+        if hasattr(self, "tapped"):
+            treasureObject["tapped"] = self.tapped
         else:
-            treasureObject['tapped'] = False
+            treasureObject["tapped"] = False
         return treasureObject
+
     # setters
 
     def setEternal(self, tf):
@@ -499,10 +506,7 @@ class BonusSoul(Card):
         self.achieved = achieved
 
     def getJsonObject(self):
-        bonusSoulObject = {
-            "card": super().getJsonObject(),
-            "achieved": self.achieved
-        }
+        bonusSoulObject = {"card": super().getJsonObject(), "achieved": self.achieved}
         return bonusSoulObject
 
     # set a BonusSoul as achieved (once achieved a bonus soul can never be 'un-achieved' again)
@@ -512,7 +516,7 @@ class BonusSoul(Card):
         return
 
 
-'''
+"""
 Logic for soul heart
 room = user.getRoom()
         room.displayEntities()
@@ -520,4 +524,4 @@ room = user.getRoom()
         entity = room.getEntity(index)
         entity.setHp(entity.getHp() + 1)
         self.tapped = True
-'''
+"""

@@ -1,6 +1,7 @@
 # file for testing aspects of the game
 
 from Cards import *
+
 # from PIL import Image
 from Decks import Deck
 from Dice import Dice
@@ -31,7 +32,7 @@ myTreasureDeck = createTreasureCards()
 SilverTreasures = createAllSilverTreasures()
 SilverTreasures.combineDeck(myTreasureDeck)
 myTreasureDeck = SilverTreasures
-#myTreasureDeck.shuffle()
+# myTreasureDeck.shuffle()
 myBoard = Board(myMonsterDeck, myTreasureDeck, myLootDeck)
 myRoom = Room(myStack, myBoard)
 
@@ -54,5 +55,3 @@ myRoom.addPlayer(player4)
 myBoard.checkMonsterSlotsTurnZero()
 myBoard.checkTreasureSlots()
 myBoard.startTurn(player1)
-
-

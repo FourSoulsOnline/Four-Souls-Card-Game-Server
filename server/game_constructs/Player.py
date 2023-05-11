@@ -6,12 +6,13 @@
 #        getChosenPlayer, drawLoot, drawTreasure, drawMonster, getName
 #    Daniel De Guzman:
 #        getPlayerHandObject, getPlayerBoardSectionObject, getJsonObject
-'''
+"""
 Players are contained in a Room
 Player can access their Room
 Players can access their Character
-'''
+"""
 from Cards import Character
+from Cards import GoldTreasure
 from Decks import Deck
 from LootReward import LootReward
 from TreasureReward import TreasureReward
@@ -22,7 +23,9 @@ from SilverTreasureCards import *
 import sys
 from Board import checkGuppySoul
 from JsonOutputHelper import JsonOutputHelper
+
 Json = JsonOutputHelper()
+
 
 class Player:
     def __init__(self, character, num, room, socketId, username):
@@ -31,16 +34,16 @@ class Player:
         self.room = room
         self.socketId = socketId
         self.username = username
-        self.coins = 10 # players always have 3 coins at the start of the game
+        self.coins = 10  # players always have 3 coins at the start of the game
         # self.hand = Deck([])
-        #self.hand = createBombCards()
-        self.hand = createAllLootCards() # all loot cards are in player hand for debug purposes
+        self.hand = createHandDemo()
+        # self.hand = createAllLootCards() # all loot cards are in player hand for debug purposes
         self.items = Deck([])
         self.getStartingItem(character.getName())
         # self.items = createAllStartingItems()
         # self.items = createTreasureCards()
-        #self.items.combineDeck(createDiceEffectTreasures())
-        #self.items.combineDeck(createAllStartingItems())
+        # self.items.combineDeck(createDiceEffectTreasures())
+        # self.items.combineDeck(createAllStartingItems())
         self.souls = 0
 
     def getStartingItem(self, characterName):
@@ -70,9 +73,6 @@ class Player:
         }
         self.items.addCardTop(characterItemDict[characterName])
 
-        
-
-
     # getters
 
     def getCharacter(self):
@@ -101,10 +101,10 @@ class Player:
 
     def getRoom(self):
         return self.room
-    
+
     def getSocketId(self):
         return self.socketId
-    
+
     def getUsername(self):
         return self.username
 
@@ -123,7 +123,7 @@ class Player:
     def getAttack(self):
         return self.character.getAttack()
 
-    '''
+    """
     def getPlayerHandObject(self):
         playerObject = {
             "messageFlag": "PLAYER-HAND",
@@ -145,8 +145,8 @@ class Player:
             "items": self.items.getJsonObject(),
         }
         return playerObject
-        '''
-    
+        """
+
     def getJsonObject(self):
         playerObject = {
             "playerNumber": self.num,
@@ -156,7 +156,7 @@ class Player:
             "items": self.items.getJsonObject(),
             "hand": self.hand.getJsonObject(),
             "curses": "TBD (from Player.py)",
-            "character": self.character.getJsonObject()
+            "character": self.character.getJsonObject(),
         }
         return playerObject
 
@@ -220,9 +220,9 @@ class Player:
         playerChoice = int(input())
         # return character enteties as player objects instead (necessary for death to work correctly because it is a player function)
         if playerChoice <= len(self.room.getPlayers()):
-            return self.room.getPlayers()[playerChoice-1]
-        else: # return monster
-            return entities[playerChoice-1]
+            return self.room.getPlayers()[playerChoice - 1]
+        else:  # return monster
+            return entities[playerChoice - 1]
 
     # choose a monster and return it
     def chooseMonster(self, message):
@@ -299,13 +299,14 @@ class Player:
                 iter += 1
             Json.choiceOutput(self.getSocketId(), message, itemList)
             playerChoice = int(input())
-            stealIndex = -playerChoice - 1 # -2 is to account of the difference from the index pov and the eternal item
+            stealIndex = (
+                -playerChoice - 1
+            )  # -2 is to account of the difference from the index pov and the eternal item
             stolenTreasure = chosenPlayer.getItems().removeCardIndex(stealIndex)
             self.getItems().addCardTop(stolenTreasure)
             message = f"Player {self.getNumber()} stole an item from Player {chosenPlayer.getNumber()}!"
             Json.systemOutput(message)
         return
-
 
     # setters
 
@@ -335,8 +336,10 @@ class Player:
             lootCard = self.getBoard().getLootDeck().deal()
             self.hand.addCardTop(lootCard)
             # check if soul of gluttony should be awarded
-            if (self.hand.getDeckLength() >= 10) and (self.getBoard().getSoulDict()['Gluttony'] is False):
-                self.getBoard().getSoulDict()['Gluttony'] = True
+            if (self.hand.getDeckLength() >= 10) and (
+                self.getBoard().getSoulDict()["Gluttony"] is False
+            ):
+                self.getBoard().getSoulDict()["Gluttony"] = True
                 message = f"Player {self.num} achieved the Soul of Gluttony!"
                 Json.systemOutput(message)
                 self.addSouls(1)
@@ -350,12 +353,15 @@ class Player:
             treasureCard = self.getBoard().getTreasureDeck().deal()
             self.items.addCardTop(treasureCard)
             checkGuppySoul(treasureCard, self)
-            # the treasure has no tag, return
-            if isinstance(treasureCard, PlainSilverTreasure):
-                return
+            # the treasure has no tag, do nothing
+            if isinstance(treasureCard, PlainSilverTreasure) or isinstance(
+                treasureCard, GoldTreasure
+            ):
+                pass
             # the treasure must have a tag, add that card to global effects
-            board = self.getBoard()
-            board.getGlobalEffects().append([treasureCard, self])
+            else:
+                board = self.getBoard()
+                board.getGlobalEffects().append([treasureCard, self])
         Json.playerBoardOutput(self)
         return
 
@@ -388,24 +394,42 @@ class Player:
             deck.addCardTop(self.getBoard().getMonsterDeck().deal())
         return deck
 
-    # use the discardTreasure funct in Board with this to put it in the discard deck
     def chooseDiscardTreasure(self, player):
-        playerOption = []
-        message = "Which treasure card do you want to discard?"
-        for i in player.getItems().getCardList():
-            if i.getEternal() is not True:
+        valid = False
+        while valid is False:
+            playerOption = []
+            message = "Which treasure card do you want to discard?"
+            for i in player.getItems().getCardList():
                 playerOption.append(i.getName())
-        Json.choiceOutput(player.getSocketId(), message, playerOption)
-        inp = int(input())
-        inp -= 1
-        treasure = player.getItems().getCardName(playerOption[inp])
+            Json.choiceOutput(player.getSocketId(), message, playerOption)
+            inp = int(input())
+            inp -= 1
+            treasure = player.getItems().getCardName(playerOption[inp])
+            if treasure.getEternal() is True:
+                message = "Can't discard an eternal item"
+                Json.systemOutput(message)
+            else:
+                valid = True
+        # if the card being discarded has a global effect
+        plainSilver = isinstance(treasure, PlainSilverTreasure)
+        plainGold = isinstance(treasure, GoldTreasure)
+        if (plainSilver is False) and (plainGold is False):
+            # remove that global effect from the list
+            globalEffects = self.getBoard().getGlobalEffects()
+            for i in range(len(globalEffects)):
+                if globalEffects[i][0] == treasure:
+                    globalEffects.remove(globalEffects[i])
+                    break
+
         player.getBoard().getDiscardTreasureDeck().addCardTop(treasure)
         message = f"Player {self.getNumber()} discarded {treasure.getName()}."
         Json.systemOutput(message)
+        Json.discardTreasureDeckOutput(
+            player.getRoom().getBoard().getDiscardTreasureDeck()
+        )
         return player.getItems().removeCardIndex(inp)
 
     # choose a loot card from your hand to discard
-    # use the discardLoot funct in Board with this to put it in the discard deck
     # this should only be used to discard one card at a time so num is pointless
     def chooseDiscard(self, num, player):
         playerOption = []
@@ -418,6 +442,7 @@ class Player:
         loot = player.getHand().getCard(inp)
         player.getBoard().getDiscardLootDeck().addCardTop(loot)
         Json.playerHandOutput(player)
+        Json.discardLootDeckOutput(player.getRoom().getBoard().getDiscardLootDeck())
         return player.getHand().removeCardIndex(inp)
 
     # choose a loot card and return the index of that card in the player's hand
@@ -442,9 +467,6 @@ class Player:
         inp -= 1
         return inp
 
-
-
-
     # add the shop treasure in the specified index to the players collection
     def purchase(self, slotNum):
         numSlots = len(self.getBoard().getTreasures())
@@ -455,8 +477,12 @@ class Player:
             checkGuppySoul(treasureCard, self)
             # the treasure has no tag, return
             if isinstance(self.getBoard().getTreasure(slotNum), PlainSilverTreasure):
+                self.getBoard().clearTreasureSlot(slotNum)
+                self.getBoard().checkTreasureSlots()
                 return
             if isinstance(self.getBoard().getTreasure(slotNum), GoldTreasure):
+                self.getBoard().clearTreasureSlot(slotNum)
+                self.getBoard().checkTreasureSlots()
                 return
             # the treasure must have a tag, add that card to global effects
             board = self.getBoard()
@@ -487,8 +513,15 @@ class Player:
     def addSouls(self, num):
         self.souls += num
         if self.souls >= 4:
-            message = f"Player {self.num} has won the game!!!"
-            Json.systemOutput(message)
+            playerList = self.room.getPlayers()
+            for player in playerList:
+                Json.playerHandOutput(player)
+                Json.playerBoardOutput(player)
+            Json.monsterOutput(self.room.getBoard().getMonsters())
+            Json.treasureOutput(self.room.getBoard().getTreasures())
+            # message = f"Player {self.num} has won the game!!!"
+            # Json.systemOutput(message)
+            Json.winOutput(self)
             sys.exit(0)
         return
 
@@ -499,8 +532,8 @@ class Player:
     def addCoins(self, num):
         self.coins += num
         # award soul of greed if player has 25c and soul of greed has not been collected yet
-        if (self.coins >= 25) and (self.getBoard().getSoulDict()['Greed'] is False):
-            self.getBoard().getSoulDict()['Greed'] = True
+        if (self.coins >= 25) and (self.getBoard().getSoulDict()["Greed"] is False):
+            self.getBoard().getSoulDict()["Greed"] = True
             message = f"Player {self.num} achieved the Soul of Greed!\n"
             Json.systemOutput(message)
             self.addSouls(1)
@@ -519,6 +552,7 @@ class Player:
         self.coins -= num
         if self.coins < 0:
             self.coins = 0
+        Json.playerBoardOutput(self)
         return
 
     def subtractTapped(self):
@@ -550,12 +584,16 @@ class Player:
             # check for "take damage" effects in globalEffects
             globalEffects = self.getBoard().getGlobalEffects()
             for i in range(len(globalEffects)):
+                if (i + 1) > len(globalEffects):
+                    pass
                 # if the player's character took damage
                 if isinstance(globalEffects[i][0], TakeDamageTreasure):
                     itemUser = globalEffects[i][1]
                     if self.getNumber() == itemUser.getNumber():
                         itemUser.addToStack(globalEffects[i][0])
-                        itemUser.getRoom().useDamageEffect(itemUser.getNumber(), hpBefore - hpAfter)
+                        itemUser.getRoom().useDamageEffect(
+                            itemUser.getNumber(), hpBefore - hpAfter
+                        )
         if hpAfter < 1:
             self.die(attacker)
         return
@@ -571,14 +609,16 @@ class Player:
         if self.hand.getDeckLength() > 0:
             message = f"Player {self.num} had 1 loot lost :("
             Json.systemOutput(message)
-            #self.hand.printCardListNames()
+            # self.hand.printCardListNames()
             self.chooseDiscard(1, self)
+            Json.discardLootDeckOutput(self.getBoard().getDiscardLootDeck())
         # if the player has 2+ items (because they will always have 1 eternal item that cant be discarded)
         if self.items.getDeckLength() > 1:
             message = f"Player {self.num} had 1 treasure taken D:"
             Json.systemOutput(message)
-            #self.items.printCardListNames()
+            # self.items.printCardListNames()
             self.chooseDiscardTreasure(self)
+            Json.discardTreasureDeckOutput(self.getBoard().getDiscardTreasureDeck())
         message = f"Player {self.num} exhausts all their energy :0"
         Json.systemOutput(message)
         itemsList = self.items.getCardList()
@@ -618,4 +658,3 @@ class Player:
     def addInventory(self, effect):
         self.character.addInventory(effect)
         return
-

@@ -9,11 +9,11 @@
 #       displayMonster
 #   Daniel De Guzman:
 #       getJsonObject()
-'''
+"""
 The Board Contains all Decks (including discard piles) and Monsters/Treasures in their deck slots
 Board is an attribute of a Room
 Board is accessible from a Player
-'''
+"""
 from Decks import Deck
 from Cards import *
 from Coins import *
@@ -27,6 +27,7 @@ from SilverTreasureCards import StartTurnTreasure
 from SilverTreasureCards import EndTurnTreasure
 from Events import Event
 from JsonOutputHelper import JsonOutputHelper
+
 Json = JsonOutputHelper()
 import time
 import threading
@@ -34,9 +35,11 @@ from threading import Timer
 
 Json = JsonOutputHelper()
 
+
 def forcedEndTurn(player):
     print("\ntime expired, ending turn...")
     return player.getBoard().endTurn(player)
+
 
 def lootPlay(player):
     if player.getHand().getDeckLength() == 0:
@@ -44,8 +47,8 @@ def lootPlay(player):
         playerId = player.getSocketId()
         Json.systemPrivateOutput(playerId, message)
     else:
-        #player.getHand().printCardListNames() #TODO: Comment this line in final version
-        #print(f"{player.getHand().getDeckLength() + 1}: Cancel\n") #TODO: this line too
+        # player.getHand().printCardListNames() #TODO: Comment this line in final version
+        # print(f"{player.getHand().getDeckLength() + 1}: Cancel\n") #TODO: this line too
         num = player.chooseLootIndex() + 1
         handLen = player.getHand().getDeckLength()
         # cancel the loot play
@@ -59,7 +62,9 @@ def lootPlay(player):
             # remove the used card from hand
             loot = player.getHand().removeCardIndex(num - 1)
             # Message to update other players that someone is trying to play a card
-            message = f"Hey! Player {player.getNumber()} is trying to play {loot.getName()}"
+            message = (
+                f"Hey! Player {player.getNumber()} is trying to play {loot.getName()}"
+            )
             Json.systemOutput(message)
             # use the loot card
             player.addToStack(loot)
@@ -70,14 +75,15 @@ def lootPlay(player):
                 Json.discardLootDeckOutput(player.getBoard().getDiscardLootDeck())
     return
 
+
 def itemPlay(player):
     if player.getItems().getDeckLength() == 0:
         message = "You have no treasure cards in your hand!"
         playerId = player.getSocketId()
         Json.systemPrivateOutput(playerId, message)
     else:
-        #player.getItems().printCardListNames() # TODO: comment this
-        #print(f"{player.getItems().getDeckLength() + 1}: Cancel\n") # TODO: comment this
+        # player.getItems().printCardListNames() # TODO: comment this
+        # print(f"{player.getItems().getDeckLength() + 1}: Cancel\n") # TODO: comment this
         num = player.chooseTreasureIndex() + 1
         # cancel option
         if num > len(player.getItems().getCardList()):
@@ -96,12 +102,15 @@ def itemPlay(player):
             Json.systemPrivateOutput(playerId, message)
             return
         # Message to update other players that someone is trying to play a card
-        message = f"Hey! Player {player.getNumber()} is trying to play {treasure.getName()}"
+        message = (
+            f"Hey! Player {player.getNumber()} is trying to play {treasure.getName()}"
+        )
         Json.systemOutput(message)
         # use the treasure card
         player.addToStack(treasure)
         player.getRoom().useTopStack(player.getNumber())
     return
+
 
 # returns True if a specified item is a Guppy item
 def checkGuppy(item):
@@ -111,6 +120,8 @@ def checkGuppy(item):
     if name == "Dead Cat":
         return True
 
+
+# TODO: users are given soul of guppy when having only 1 guppy item
 # gives the player soul of guppy if applicable
 def checkGuppySoul(treasureCard, player):
     # check for guppy
@@ -120,13 +131,14 @@ def checkGuppySoul(treasureCard, player):
         for i in range(player.getItems().getDeckLength()):
             if checkGuppy(items[i]) is True:
                 # award soul of guppy
-                player.getBoard().getSoulDict()['Guppy'] = True
+                player.getBoard().getSoulDict()["Guppy"] = True
                 message = f"Player {player.getNumber()} achieved the Soul of Guppy!"
                 Json.systemOutput(message)
                 player.addSouls(1)
                 Json.playerBoardOutput(player)
                 return
     return
+
 
 class Board:
     def __init__(self, monsterDeck, treasureDeck, lootDeck):
@@ -135,7 +147,7 @@ class Board:
         self.maxTreasureSlots = 20
         # active----- is the populated slots for that card type. it should always be a list of lists
         # (even if the inside lists only have a single element)
-        self.activeMonsters = [[], []] # active monsters are stored on the -1 index
+        self.activeMonsters = [[], []]  # active monsters are stored on the -1 index
         self.activeTreasures = [[], []]
         # the deck of ----- cards
         self.monsterDeck = monsterDeck
@@ -166,7 +178,7 @@ class Board:
             "discardTreasureDeck": self.discardTreasureDeck.getJsonObject(),
             "discardLootDeck": self.discardLootDeck.getJsonObject(),
             "globalEffects": self.globalEffects,
-            "soulDict": self.soulDict
+            "soulDict": self.soulDict,
         }
         return boardObject
 
@@ -222,7 +234,7 @@ class Board:
         player.getCharacter().setTapped(2)
         player.getCharacter().setAttacksLeft(1)
         player.getCharacter().setPurchases(1)
-        for i in range(player.getItems().getDeckLength()): # recharge items
+        for i in range(player.getItems().getDeckLength()):  # recharge items
             if isinstance(player.getItems().getCardList()[i], GoldTreasure):
                 player.getItems().getCardList()[i].setTapped(False)
         # update what tools the player has accessible before using "start of turn" treasures
@@ -248,13 +260,18 @@ class Board:
         player.getRoom().incrementActivePlayer()
         Json.playerBoardOutput(player)
         Json.playerHandOutput(player)
-        #time.sleep(1)
+        # Output activeMonsters to get updated health/atk
+        Json.monsterOutput(self.activeMonsters)
+        # Update hp/other stats of players
+        for i in range(len(player.getRoom().getPlayers())):
+            Json.playerBoardOutput(player.getRoom().getPlayers()[i])
+        # time.sleep(1)
         while inp != 6:
             # at the start of each action, create a timer
-            #timer = Timer(5.0, forcedEndTurn, kwargs={"player": player})
-            #timer.start()
+            # timer = Timer(5.0, forcedEndTurn, kwargs={"player": player})
+            # timer.start()
 
-            '''
+            """
             # trying to debug Timers
             # get a list of all active threads
             thread_list = threading.enumerate()
@@ -264,16 +281,27 @@ class Board:
                 print("Thread name:", thread.getName())
                 print("Thread ID:", thread.ident)
                 print("Thread is daemon:", thread.daemon)
-            '''
+            """
 
-            choices = ["Play a Loot Card", "Activate a Gold Treasure", "Attack a Monster", "Purchase a Shop Item", "Trade", "End Turn"]
-            Json.choiceOutput(player.getSocketId(), "It's your turn! What would you like to do?", choices)
+            choices = [
+                "Play a Loot Card",
+                "Activate a Gold Treasure",
+                "Attack a Monster",
+                "Purchase a Shop Item",
+                "Trade",
+                "End Turn",
+            ]
+            Json.choiceOutput(
+                player.getSocketId(),
+                "It's your turn! What would you like to do?",
+                choices,
+            )
             inp = int(input())
             if inp == 1:
-                #timer.cancel()
+                # timer.cancel()
                 lootPlay(player)
             elif inp == 2:
-                #timer.cancel()
+                # timer.cancel()
                 itemPlay(player)
             elif inp == 3:
                 if player.getCharacter().getAttacksLeft() <= 0:
@@ -281,26 +309,32 @@ class Board:
                     Json.systemOutput(message)
                 else:
                     # show active monsters and prompt an attack
-                    #self.displayActiveMonsters() #TODO: Comment this and prints out
-                    #print(f"{len(self.activeMonsters) + 1}: FACE DOWN MONSTER")
-                    #print(f"{len(self.activeMonsters) + 2}: CANCEL\n")
+                    # self.displayActiveMonsters() #TODO: Comment this and prints out
+                    # print(f"{len(self.activeMonsters) + 1}: FACE DOWN MONSTER")
+                    # print(f"{len(self.activeMonsters) + 2}: CANCEL\n")
                     message = f"What monster do you want to attack?"
                     monsterChoice = player.chooseAttackTarget(message)
                     # cover an existing monster
                     if monsterChoice == "face down monster":
-                        #timer.cancel()
+                        # timer.cancel()
                         slotNum = self.coverMonster()
-                        monsterChoice = self.activeMonsters[slotNum-1][-1]
+                        monsterChoice = self.activeMonsters[slotNum - 1][-1]
                     # cancel prompted attack
                     if monsterChoice == "cancel":
                         pass
                     # add the declared attack to the stack
                     else:
-                        #timer.cancel()
+                        # timer.cancel()
                         player.addToStack(DeclaredAttack(monsterChoice))
                         # clear anything at the top of the stack that isnt the DeclaredAttack
                         if len(player.getRoom().getStack().getStack()) > 0:
-                            while isinstance(player.getRoom().getStack().getStack()[-1][0], DeclaredAttack) != True:
+                            while (
+                                isinstance(
+                                    player.getRoom().getStack().getStack()[-1][0],
+                                    DeclaredAttack,
+                                )
+                                != True
+                            ):
                                 player.getRoom().getStack().useTop(player.getRoom())
                             # use the declared attack
                             player.getRoom().getStack().useTop(player.getRoom())
@@ -313,9 +347,9 @@ class Board:
                     Json.systemOutput(message)
                 else:
                     # show active treasures and prompt a purchase
-                    #self.displayActiveTreasures() #TODO: comment this and prints out
-                    #print(f"{len(self.activeTreasures) + 1}: FACE DOWN TREASURE")
-                    #print(f"{len(self.activeTreasures) + 2}: CANCEL\n")
+                    # self.displayActiveTreasures() #TODO: comment this and prints out
+                    # print(f"{len(self.activeTreasures) + 1}: FACE DOWN TREASURE")
+                    # print(f"{len(self.activeTreasures) + 2}: CANCEL\n")
                     message = f"Which treasure would you like to purchase?"
                     treasureChoice = player.choosePurchaseTarget(message)
                     # cancel prompted purchase on invalid input
@@ -330,27 +364,40 @@ class Board:
                             player.addToStack(DeclaredPurchaseMystery(treasureChoice))
                         # purchase a treasure from treasure slot
                         else:
-                            #timer.cancel()
+                            # timer.cancel()
                             player.addToStack(DeclaredPurchase(treasureChoice))
 
                         # clear anything at the top of the stack that isnt the DeclaredPurchase
-                        while (isinstance(player.getRoom().getStack().getStack()[-1][0], DeclaredPurchase) != True) and \
-                                (isinstance(player.getRoom().getStack().getStack()[-1][0], DeclaredPurchaseMystery) != True):
+                        while (
+                            isinstance(
+                                player.getRoom().getStack().getStack()[-1][0],
+                                DeclaredPurchase,
+                            )
+                            != True
+                        ) and (
+                            isinstance(
+                                player.getRoom().getStack().getStack()[-1][0],
+                                DeclaredPurchaseMystery,
+                            )
+                            != True
+                        ):
                             player.getRoom().getStack().useTop(player.getRoom())
                         # use the declared attack
                         player.getRoom().getStack().useTop(player.getRoom())
             # Trading option
             elif inp == 5:
-                #timer.cancel()
+                # timer.cancel()
                 message = f"Do you want to give or receive?"
-                Json.choiceOutput(player.getSocketId(), message, ["Give", "Receive", "Cancel"])
+                Json.choiceOutput(
+                    player.getSocketId(), message, ["Give", "Receive", "Cancel"]
+                )
                 choice = int(input())
                 if choice == 1:
                     message = f"Choose a player."
                     chosenPlayer = player.getChosenPlayer(message, player)
                     valueList = []
                     for i in range(player.getCoins()):
-                        valueList.append(str(i+1))
+                        valueList.append(str(i + 1))
                     message = "How much do you want to give?"
                     Json.choiceOutput(player.getSocketId(), message, valueList)
                     amount = int(input())
@@ -361,13 +408,19 @@ class Board:
                 elif choice == 2:
                     playerList = player.getRoom().getPlayers()
                     for i in range(len(playerList) - 1):
-                        nextPlayerIndex = (player.getRoom().getActivePlayerIndex() + i + 1) % len(playerList)
+                        nextPlayerIndex = (
+                            player.getRoom().getActivePlayerIndex() + i + 1
+                        ) % len(playerList)
                         message = f"Player {nextPlayerIndex + 1}: How much do you want to give"
                         valueList = []
                         for i in range(playerList[nextPlayerIndex].getCoins()):
                             valueList.append(str(i + 1))
                         valueList.append("None")
-                        Json.choiceOutput(playerList[nextPlayerIndex].getSocketId(), message, valueList)
+                        Json.choiceOutput(
+                            playerList[nextPlayerIndex].getSocketId(),
+                            message,
+                            valueList,
+                        )
                         amount = int(input())
                         if playerList[nextPlayerIndex].getCoins() < amount:
                             message = "Choose to not give any"
@@ -381,7 +434,7 @@ class Board:
                     pass
             elif inp == 6:
                 if player.getCharacter().getMandatoryAttacks() < 1:
-                    #timer.cancel()
+                    # timer.cancel()
                     return self.endTurn(player)
                 else:
                     message = "You must attack another time this turn!"
@@ -394,6 +447,8 @@ class Board:
     def endTurn(self, player):
         # check for "at end of your turn" effects in globalEffects
         for i in range(len(self.globalEffects)):
+            if (i + 1) > len(self.globalEffects):
+                pass
             if isinstance(self.globalEffects[i][0], EndTurnTreasure):
                 # if it is the end of the itemUsers turn
                 itemUser = self.globalEffects[i][1]
@@ -435,7 +490,9 @@ class Board:
                 if isinstance(nextMonster, Event):
                     # We want to show the Event Card before popping it off of the monster section.
                     Json.monsterOutput(self.activeMonsters)
-                    player.getRoom().addToStack([nextMonster, player.getRoom().getActivePlayer()])
+                    player.getRoom().addToStack(
+                        [nextMonster, player.getRoom().getActivePlayer()]
+                    )
                     player.getRoom().useTopStack(0)
                     # is it possible that we may miss a monster slot here? ^ - D.D.
         # After filling all the spots, construct the Monster Array - D.D.
@@ -496,14 +553,14 @@ class Board:
         message = f"The face down monster is revealed to be {topMonster.getName()}!"
         Json.systemOutput(message)
         slotNum = int(input("Which slot would you like to cover?: "))
-        self.activeMonsters[slotNum-1].append(topMonster)
+        self.activeMonsters[slotNum - 1].append(topMonster)
         Json.monsterOutput(self.activeMonsters)
         return slotNum
 
     # prints the name of each active monster
     def displayActiveMonsters(self):
-        #print("Here are the monsters on the Board:")
-        #for i in range(len(self.activeMonsters)):
+        # print("Here are the monsters on the Board:")
+        # for i in range(len(self.activeMonsters)):
         #    if len(self.activeMonsters[i]) == 0:
         #        print("Empty")
         #    # print the name of the -1'th index of each monster slot
@@ -529,8 +586,8 @@ class Board:
         return
 
     def displayActiveTreasures(self):
-        #print("Here are the treasures in the Shop (10 cents):")
-        #for i in range(len(self.activeTreasures)):
+        # print("Here are the treasures in the Shop (10 cents):")
+        # for i in range(len(self.activeTreasures)):
         #    if len(self.activeTreasures[i]) == 0:
         #        print("Empty")
         #    else:
@@ -549,7 +606,9 @@ class Board:
     def discardTreasure(self, player, itemIndex):
         discard = player.getItems().getCard(itemIndex)
         # if the card being discarded has a global effect
-        plainSilver = isinstance(player.getItems().getCardList()[itemIndex], PlainSilverTreasure)
+        plainSilver = isinstance(
+            player.getItems().getCardList()[itemIndex], PlainSilverTreasure
+        )
         plainGold = isinstance(player.getItems().getCardList()[itemIndex], GoldTreasure)
         if (plainSilver is False) and (plainGold is False):
             # remove that global effect from the list
@@ -573,7 +632,7 @@ class Board:
 
     # clears a treasure in the matching index (used when a player purchases an item)
     def clearTreasureSlot(self, slotNum):
-        (self.activeTreasures[slotNum-1]).pop()
+        (self.activeTreasures[slotNum - 1]).pop()
         return
 
     # returns the index of a monster with the provided name
@@ -590,14 +649,16 @@ class Board:
 
     # used to display a single monster, kinda not working correctly (testing with input 0-2), don't know if needed
     def displayMonster(self, index):
-        #print(self.activeMonsters[index - 1][-1].getName())
+        # print(self.activeMonsters[index - 1][-1].getName())
         return
 
     # used to steal cards from another player, user will steal card from chosenPlayer4
     def stealTreasure(self, user, chosenPlayer, cardIndex):
         # user is person stealing the card from chosenPlayer, cardIndex is card wanting to steal
         discard = chosenPlayer.getItems().getCard(cardIndex)
-        plainSilver = isinstance(chosenPlayer.getItems().getCard(cardIndex), PlainSilverTreasure)
+        plainSilver = isinstance(
+            chosenPlayer.getItems().getCard(cardIndex), PlainSilverTreasure
+        )
         plainGold = isinstance(chosenPlayer.getItems().getCard(cardIndex), GoldTreasure)
         # check to see if item would be in global effects, if so update global effects
         if (plainSilver is False) and (plainGold is False):
@@ -609,6 +670,6 @@ class Board:
         # delete the stolen card from chosenPlayer
         chosenPlayer.getItems().removeCardIndex(cardIndex)
         # add the card to user's items
-        user.getItems().addCardBottom(discard)
         checkGuppySoul(discard, user)
+        user.getItems().addCardBottom(discard)
         return

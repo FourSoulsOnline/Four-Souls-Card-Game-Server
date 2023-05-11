@@ -7,17 +7,19 @@ from Cards import SilverTreasure
 from Decks import Deck
 from Effects import *
 from JsonOutputHelper import JsonOutputHelper
+
 # from PIL import Image
 import random
 
 Json = JsonOutputHelper()
 
+
 # cards that have no triggered effects
 class PlainSilverTreasure(SilverTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
-        self.tag = ['no tag']
-    
+        self.tag = ["no tag"]
+
     # def getJsonObject(self):
     #     silverTreasureObject = {
     #         "silverTreasure": super().getJsonObject(),
@@ -25,16 +27,17 @@ class PlainSilverTreasure(SilverTreasure):
     #     }
     #     return silverTreasureObject
 
+
 # cards that have an activated ability after a dice is resolved to a specific value
 class DiceEffectTreasure(SilverTreasure):
     def __init__(self, name, picture, eternal, diceCheck):
         super().__init__(name, picture, eternal)
         self.diceCheck = diceCheck
-        self.tag = ['dice effect']
+        self.tag = ["dice effect"]
 
     def getDiceCheck(self):
         return self.diceCheck
-    
+
     # def getJsonObject(self):
     #     diceEffectTreasureObject = {
     #         "silverTreasure": super().getJsonObject(),
@@ -42,6 +45,7 @@ class DiceEffectTreasure(SilverTreasure):
     #         "diceCheck": self.diceCheck
     #     }
     #     return diceEffectTreasureObject
+
 
 # each time a player rolls a 2, recharge an item
 class ChargedBaby(DiceEffectTreasure):
@@ -76,6 +80,7 @@ class ChargedBaby(DiceEffectTreasure):
         Json.systemOutput(message)
         return
 
+
 # each time a player rolls a 6, reveal top card of any deck, put it back or put it in the discard
 class CheeseGrater(DiceEffectTreasure):
     def __init__(self, name, picture, eternal, diceCheck):
@@ -93,7 +98,9 @@ class CheeseGrater(DiceEffectTreasure):
         if choice == 1:
             # get a card from the loot deck and display the name to the player
             card = board.getLootDeck().deal()
-            message = f"The loot card is {card.getName()}. Do you want to discard this card?"
+            message = (
+                f"The loot card is {card.getName()}. Do you want to discard this card?"
+            )
             Json.choiceOutput(user.getSocketId(), message, ["Yes", "No"])
             cardDecision = int(input())
             if cardDecision == 1:
@@ -140,6 +147,7 @@ class CheeseGrater(DiceEffectTreasure):
                 board.getTreasureDeck().addCardTop(card)
         return
 
+
 # each time a player rolls a 3 you may loot at their hand and steal a loot card from them
 class DeadBird(DiceEffectTreasure):
     def __init__(self, name, picture, eternal, diceCheck):
@@ -161,12 +169,15 @@ class DeadBird(DiceEffectTreasure):
         Json.choiceOutput(user.getSocketId(), message, playerOption)
         cardChoice = int(input())
         # remove chosen card from chosen player and give it to user
-        playerChoice.getHand().getCard(cardChoice - 1)
+        playerCard = playerChoice.getHand().getCard(cardChoice - 1)
         playerChoice.getHand().removeCardIndex(cardChoice - 1)
         user.getHand().addCardTop(playerCard)
-        message = f"Player {user.getNumber()} stole a loot card from Player {playerChoice}"
+        message = (
+            f"Player {user.getNumber()} stole a loot card from Player {playerChoice}"
+        )
         Json.systemOutput(message)
         return
+
 
 # each time a player rolls a 2, you may swap a non-eternal item you control with a non-eternal item they control
 class Finger(DiceEffectTreasure):
@@ -188,7 +199,10 @@ class Finger(DiceEffectTreasure):
             Json.systemOutput(message)
             return
         # have to have more than 1 item to be able to swap, 1 because always have eternal item
-        if room.getActivePlayer().getItems().getDeckLength() < 1 or user.getItems().getDeckLength() < 1:
+        if (
+            room.getActivePlayer().getItems().getDeckLength() < 1
+            or user.getItems().getDeckLength() < 1
+        ):
             message = "Not enough items to swap"
             Json.systemOutput(message)
             return
@@ -204,30 +218,38 @@ class Finger(DiceEffectTreasure):
             # check to make sure selected card isn't an eternal item
             message = "Choose one of your items to swap"
             userOption = []
-            for i in user.getItems.getCardList():
+            for i in user.getItems().getCardList():
                 userOption.append(i.getName())
             Json.choiceOutput(user.getSocketId(), message, userOption)
             userChoice = int(input())
             # check to make sure both chosen cards a not eternal, if they are break loop and go through it again
-            if  room.getActivePlayer().getItems().getCard(cardChoice - 1).getEternal() == True:
+            if (
+                room.getActivePlayer().getItems().getCard(cardChoice - 1).getEternal()
+                == True
+            ):
                 message = "Can't choose an eternal items from player to swap with"
                 Json.systemOutput(message)
-                break
             elif user.getItems().getCard(userChoice - 1).getEternal() == True:
                 message = "Can't choose an eternal item from your items to swap with"
                 Json.systemOutput(message)
-                break
             else:
-                message = f"Player {user.getNumber()} swapped his {user.getItems().getCard(userChoice - 1).getName()}"\
-                      f"with Player's {room.getActivePlayer().getNumber()} "\
-                      f"{room.getActivePlayer().getItems().getCard(cardChoice - 1).getName()}"
+                message = (
+                    f"Player {user.getNumber()} swapped his {user.getItems().getCard(userChoice - 1).getName()}"
+                    f"with Player's {room.getActivePlayer().getNumber()} "
+                    f"{room.getActivePlayer().getItems().getCard(cardChoice - 1).getName()}"
+                )
                 Json.systemOutput(message)
                 # have the user of finger, steal the card they wanted to swap from active player
-                room.getBoard().stealTreasure(user, room.getActivePlayer(), cardChoice - 1)
+                room.getBoard().stealTreasure(
+                    user, room.getActivePlayer(), cardChoice - 1
+                )
                 # have the active player steal user's chosen card that they wanted to swap with
-                room.getBoard().stealTreasure(room.getActivePlayer(), user, userChoice - 1)
+                room.getBoard().stealTreasure(
+                    room.getActivePlayer(), user, userChoice - 1
+                )
                 return
         return
+
 
 # each time a player rolls a 4 you may loot 1 then discard a loot
 class MomsBox(DiceEffectTreasure):
@@ -239,7 +261,9 @@ class MomsBox(DiceEffectTreasure):
         self.diceCheck = diceCheck
 
     def use(self, user):
-        message = f"{user.getCharacter().getName()} just gained 1 loot from {self.name}!"
+        message = (
+            f"{user.getCharacter().getName()} just gained 1 loot from {self.name}!"
+        )
         Json.systemOutput(message)
         user.loot(1)
         # display all loot cards
@@ -253,6 +277,7 @@ class MomsBox(DiceEffectTreasure):
         user.getBoard().discardLoot(user, index)
         return
 
+
 # each time a player rolls a 6 you may deal 1 damage to them
 class MomsRazor(DiceEffectTreasure):
     def __init__(self, name, picture, eternal, diceCheck):
@@ -264,7 +289,9 @@ class MomsRazor(DiceEffectTreasure):
 
     def use(self, user):
         room = user.getRoom()
-        stack = room.getStack().getStack() # i think the dice should always be at stack index -1
+        stack = (
+            room.getStack().getStack()
+        )  # i think the dice should always be at stack index -1
         message = f"Do you want to deal 1 damage to Player {stack[-1][1].getNumber()}"
         Json.choiceOutput(user.getSocketId(), message, ["Yes", "No"])
         choice = int(input())
@@ -277,6 +304,7 @@ class MomsRazor(DiceEffectTreasure):
             message = f"Player {stack[-1][1].getNumber()} is unaffected by {self.name}."
             Json.systemOutput(message)
         return
+
 
 # each time a player rolls a 5, gains 3 cents
 class EyeOfGreed(DiceEffectTreasure):
@@ -293,6 +321,7 @@ class EyeOfGreed(DiceEffectTreasure):
         user.addCoins(3)
         return
 
+
 # each time a player rolls a 1, loot 1
 class TheRelic(DiceEffectTreasure):
     def __init__(self, name, picture, eternal, diceCheck):
@@ -303,10 +332,13 @@ class TheRelic(DiceEffectTreasure):
         self.diceCheck = diceCheck
 
     def use(self, user):
-        message = f"{user.getCharacter().getName()} just gained 1 loot from {self.name}!"
+        message = (
+            f"{user.getCharacter().getName()} just gained 1 loot from {self.name}!"
+        )
         Json.systemOutput(message)
         user.loot(1)
         return
+
 
 def createDiceEffectTreasures():
     diceEffectDeck = Deck([])
@@ -333,7 +365,8 @@ def createDiceEffectTreasures():
 class StartTurnTreasure(SilverTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
-        self.tag = ['start of your turn']
+        self.tag = ["start of your turn"]
+
 
 # at start of your turn roll...
 class DarkBum(StartTurnTreasure):
@@ -345,6 +378,7 @@ class DarkBum(StartTurnTreasure):
 
     def use(self, user):
         from Dice import rollDice
+
         count = rollDice(user)
         if count < 3:
             message = f"{self.name} creates riches (3c)!"
@@ -360,6 +394,7 @@ class DarkBum(StartTurnTreasure):
             Json.systemOutput(message)
         return
 
+
 # at start of your turn choose a player at random. that player destroys an item they control
 class MonstrosTooth(StartTurnTreasure):
     def __init__(self, name, picture, eternal):
@@ -373,13 +408,17 @@ class MonstrosTooth(StartTurnTreasure):
         num = random.randint(0, len(players) - 1)
         chosenPlayer = players[num]
         # make sure they have an item that can be destroyed
-        if chosenPlayer.getItems().getDeckLength() > 1: # this assumes that the player will always have exactly 1 eternal item
+        if (
+            chosenPlayer.getItems().getDeckLength() > 1
+        ):  # this assumes that the player will always have exactly 1 eternal item
             valid = False
             while valid is False:
                 playerOption = []
                 for i in chosenPlayer.getItems().getCardList():
                     playerOption.append(i.getName())
-                message = f"Player {chosenPlayer.getNumber()}, which item will you destroy?"
+                message = (
+                    f"Player {chosenPlayer.getNumber()}, which item will you destroy?"
+                )
                 Json.choiceOutput(chosenPlayer.getSocketId(), message, playerOption)
                 choice = int(input()) - 1
                 # prevent player from choosing an eternal item
@@ -388,6 +427,7 @@ class MonstrosTooth(StartTurnTreasure):
                     Json.systemOutput(message)
                 else:
                     valid = True
+            chosenItem = chosenPlayer.getItems().getCard(choice)
             user.getBoard().discardTreasure(chosenPlayer, choice)
             message = f"Monstro destroys Player {chosenPlayer.getNumber()}'s {chosenItem.getName()}! :(("
             Json.systemOutput(message)
@@ -396,6 +436,7 @@ class MonstrosTooth(StartTurnTreasure):
             message = f"Nothing for Monstro to destroy..."
             Json.systemOutput(message)
         return
+
 
 # at start of your turn, you may put any number of shop items into the discard
 class Restock(StartTurnTreasure):
@@ -412,7 +453,10 @@ class Restock(StartTurnTreasure):
         message = f"There are {len(room.getBoard().getTreasures())} items in the shop. How many do you want to discard?"
         for i in range(len(room.getBoard().getTreasures())):
             playerOption.append(str(i + 1))
-        Json.choiceOutput(user.getSocketId(), message, )
+        Json.choiceOutput(
+            user.getSocketId(),
+            message,
+        )
         choice = int(input())
         if choice > len(room.getBoard().getTreasures()):
             message = "Not enough items in shop to discard"
@@ -446,11 +490,13 @@ def createStartTurnTreasures():
     startTurnDeck.addCardTop(restock)
     return startTurnDeck
 
+
 # cards that have an activated ability at the end of your turn
 class EndTurnTreasure(SilverTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
-        self.tag = ['end of your turn']
+        self.tag = ["end of your turn"]
+
 
 # at the end of your turn, if you have 0c gain 6c
 # activates at end of turn even if owner has cents (bug but i dont think it matters)
@@ -463,13 +509,16 @@ class EdensBlessing(EndTurnTreasure):
 
     def use(self, user):
         if user.getCoins() == 0:
-            message = f"{user.getCharacter().getName()} just gained 6 cents from {self.name}!"
+            message = (
+                f"{user.getCharacter().getName()} just gained 6 cents from {self.name}!"
+            )
             Json.systemOutput(message)
             user.addCoins(6)
         else:
             message = f"{self.name} failed to activate..."
             Json.systemOutput(message)
         return
+
 
 # at the end of your turn, you may discard any number of loot cards then loot equal to amount discarded this way
 class GoatHead(EndTurnTreasure):
@@ -505,6 +554,7 @@ class GoatHead(EndTurnTreasure):
             Json.systemOutput(message)
         return
 
+
 # at the end of your turn, if you have 8 loot cards or more in your hand, loot 2
 class StarterDeck(EndTurnTreasure):
     def __init__(self, name, picture, eternal):
@@ -523,6 +573,7 @@ class StarterDeck(EndTurnTreasure):
             Json.systemOutput(message)
         return
 
+
 # at end of turn look at top four cards of treasure deck and put them back in any order
 class TheBlueMap(EndTurnTreasure):
     def __init__(self, name, picture, eternal):
@@ -532,7 +583,9 @@ class TheBlueMap(EndTurnTreasure):
         self.picture = picture
 
     def use(self, user):
-        message = f"Player {user.getName()} rearranges the Treasure Deck with {self.name}."
+        message = (
+            f"Player {user.getName()} rearranges the Treasure Deck with {self.name}."
+        )
         Json.systemOutput(message)
         # use dummy deck to store order player wants cards put back
         dummyDeck = Deck([])
@@ -540,16 +593,20 @@ class TheBlueMap(EndTurnTreasure):
         deck = user.drawTreasure(4)
         # put card in order that player wants them to be
         while deck.getDeckLength() > 0:
-            deck.printCardListNames()
-            index = int(input(f'Which card do you want to return to treasure deck: '))
-            # CHOICE JSON
-            dummyDeck.addCardBottom(deck.getCard(index - 1))
-            deck.removeCardIndex(index - 1)
+            message = "Which card do you want to return to treasure deck"
+            playerOption = []
+            for i in deck.getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            index = int(input()) - 1
+            dummyDeck.addCardBottom(deck.getCard(index))
+            deck.removeCardIndex(index)
         # add the cards back to the top of loot deck
         while dummyDeck.getDeckLength() > 0:
             room.getBoard().getTreasureDeck().addCardTop(dummyDeck.getCard(0))
             dummyDeck.removeCardIndex(0)
         return
+
 
 # at end of turn look at top four cards of loot deck and put them back in any order
 class TheCompass(EndTurnTreasure):
@@ -560,7 +617,9 @@ class TheCompass(EndTurnTreasure):
         self.picture = picture
 
     def use(self, user):
-        message = f"Player {user.getNumber()} rearranges the Loot Deck with {self.name}."
+        message = (
+            f"Player {user.getNumber()} rearranges the Loot Deck with {self.name}."
+        )
         Json.systemOutput(message)
         # use dummy deck to store order player wants cards put back
         dummyDeck = Deck([])
@@ -568,16 +627,20 @@ class TheCompass(EndTurnTreasure):
         deck = user.drawLoot(4)
         # put card in order that player wants them to be
         while deck.getDeckLength() > 0:
-            deck.printCardListNames()
-            index = int(input(f'Which card do you want to return to loot deck: '))
-            # CHOICE JSON
-            dummyDeck.addCardBottom(deck.getCard(index - 1))
-            deck.removeCardIndex(index - 1)
+            message = "Which card do you want to return to loot deck"
+            playerOption = []
+            for i in deck.getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            index = int(input()) - 1
+            dummyDeck.addCardBottom(deck.getCard(index))
+            deck.removeCardIndex(index)
         # add the cards back to the top of loot deck
         while dummyDeck.getDeckLength() > 0:
             room.getBoard().getLootDeck().addCardTop(dummyDeck.getCard(0))
             dummyDeck.removeCardIndex(0)
         return
+
 
 # at end of turn look at top four cards of monster deck and put them back in any order
 class TheMap(EndTurnTreasure):
@@ -588,7 +651,9 @@ class TheMap(EndTurnTreasure):
         self.picture = picture
 
     def use(self, user):
-        message = f"Player {user.getNumber()} rearranges the Monster Deck with {self.name}."
+        message = (
+            f"Player {user.getNumber()} rearranges the Monster Deck with {self.name}."
+        )
         Json.systemOutput(message)
         # use dummy deck to store order player wants cards put back
         dummyDeck = Deck([])
@@ -596,16 +661,20 @@ class TheMap(EndTurnTreasure):
         deck = user.drawMonster(4)
         # put card in order that player wants them to be
         while deck.getDeckLength() > 0:
-            deck.printCardListNames()
-            index = int(input(f'Which card do you want to return to monster deck: '))
-            # CHOICE JSON
-            dummyDeck.addCardBottom(deck.getCard(index - 1))
-            deck.removeCardIndex(index - 1)
+            message = "Which card do you want to return to monster deck"
+            playerOption = []
+            for i in deck.getCardList():
+                playerOption.append(i.getName())
+            Json.choiceOutput(user.getSocketId(), message, playerOption)
+            index = int(input()) - 1
+            dummyDeck.addCardBottom(deck.getCard(index))
+            deck.removeCardIndex(index)
         # add the cards back to the top of monster deck
         while dummyDeck.getDeckLength() > 0:
             room.getBoard().getMonsterDeck().addCardTop(dummyDeck.getCard(0))
             dummyDeck.removeCardIndex(0)
         return
+
 
 # at the end of your turn, if you have 0 loot cards in your hand, loot 2
 class ThePolaroid(EndTurnTreasure):
@@ -625,6 +694,7 @@ class ThePolaroid(EndTurnTreasure):
             Json.systemOutput(message)
         return
 
+
 def createEndTurnTreasures():
     endTurnDeck = Deck([])
     edens_blessing = EdensBlessing("Eden's Blessing", "test image.jpg", False)
@@ -643,10 +713,12 @@ def createEndTurnTreasures():
     endTurnDeck.addCardTop(the_polaroid)
     return endTurnDeck
 
+
 class TakeDamageTreasure(SilverTreasure):
     def __init__(self, name, picture, eternal):
         super().__init__(name, picture, eternal)
-        self.tag = ['take damage']
+        self.tag = ["take damage"]
+
 
 # put a counter on this card for how much damage you take, when you have 6 counters, gain 1 treasure
 class CambionConception(TakeDamageTreasure):
@@ -671,6 +743,7 @@ class CambionConception(TakeDamageTreasure):
             Json.systemOutput(message)
         return
 
+
 # each time you take damage roll...
 class CurseOfTheTower(TakeDamageTreasure):
     def __init__(self, name, picture, eternal):
@@ -682,6 +755,7 @@ class CurseOfTheTower(TakeDamageTreasure):
     def use(self, user, damageNum):
         players = user.getRoom().getPlayers()
         from Dice import rollDice
+
         message = f"Rolling for {self.name}..."
         Json.systemOutput(message)
         count = rollDice(user)
@@ -690,7 +764,7 @@ class CurseOfTheTower(TakeDamageTreasure):
             message = f"Filled with wrath you deal 1 damage to all other players!!"
             Json.systemOutput(message)
             for i in range(len(players)):
-                if (i+1) != user.getNumber():
+                if (i + 1) != user.getNumber():
                     message = f"Player {i+1} is hurt by {self.name}!"
                     Json.systemOutput(message)
                     user.dealDamage(1, players[i])
@@ -702,6 +776,7 @@ class CurseOfTheTower(TakeDamageTreasure):
             Json.systemOutput(message)
             user.dealDamage(1, monsterChoice)
         return
+
 
 # each time you take damage loot 1
 class FannyPack(TakeDamageTreasure):
@@ -717,16 +792,20 @@ class FannyPack(TakeDamageTreasure):
         user.loot(1)
         return
 
+
 def createTakeDamageTreasures():
     takeDamageDeck = Deck([])
 
-    cambion_conception = CambionConception("Cambion Conception", "test image.jpg", False)
+    cambion_conception = CambionConception(
+        "Cambion Conception", "test image.jpg", False
+    )
     takeDamageDeck.addCardTop(cambion_conception)
     fanny_pack = FannyPack("Fanny Pack", "test image.jpg", False)
     takeDamageDeck.addCardTop(fanny_pack)
     curse_of_the_tower = CurseOfTheTower("Curse of the Tower", "test image.jpg", False)
     takeDamageDeck.addCardTop(curse_of_the_tower)
     return takeDamageDeck
+
 
 def createAllSilverTreasures():
     treasureD = createDiceEffectTreasures()

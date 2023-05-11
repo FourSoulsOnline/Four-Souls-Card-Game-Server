@@ -4,12 +4,10 @@ import json
 import time
 import zlib
 import gzip
+
 # Sample data to be compressed
 outputMessage = "OMG THIS FUCKING WORKS"
-systemMessage = {
-    "messageFlag": "SYSTEM",
-    "systemMessage": outputMessage
-}
+systemMessage = {"messageFlag": "SYSTEM", "systemMessage": outputMessage}
 
 json_data = json.dumps(systemMessage)
 
